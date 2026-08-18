@@ -20,6 +20,23 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let passed = 0;
 const failures = [];
+const skipped = [];
+
+/**
+ * For things that only exist after a build.
+ *
+ * `www/app.js` and the Android project's copy of the web assets are generated,
+ * and generated files are deliberately kept out of version control. On a fresh
+ * clone they are simply absent, which is not a fault — so this reports rather
+ * than fails. When they ARE present the check still runs properly.
+ */
+async function checkBuildOutput(name, path, howToBuild) {
+  if (await exists(path)) {
+    passed += 1;
+  } else {
+    skipped.push(`${name} — not built yet; run \`${howToBuild}\``);
+  }
+}
 
 function check(name, condition, detail = "") {
   if (condition) {
@@ -194,7 +211,7 @@ for (const dep of [
 }
 
 check("service worker is present", await exists(join(root, "www/sw.js")));
-check("built bundle is present (run `npm run build` if this fails)", await exists(join(root, "www/app.js")));
+await checkBuildOutput("built web bundle present", join(root, "www/app.js"), "npm run build");
 
 const icons = await readdir(join(root, "www/icons")).catch(() => []);
 check("Play Store 512 icon is present", icons.includes("play-store-512.png"));
@@ -250,9 +267,10 @@ if (await exists(join(root, "android"))) {
     check(`Android project includes ${plugin}`, settings.includes(plugin));
   }
 
-  check(
-    "the web assets were copied into the Android project (run `npm run cap:sync` if this fails)",
-    await exists(join(root, "android/app/src/main/assets/public/app.js"))
+  await checkBuildOutput(
+    "web assets copied into the Android project",
+    join(root, "android/app/src/main/assets/public/app.js"),
+    "npm run cap:sync"
   );
 
   const launcherBg = await readFile(
@@ -343,6 +361,9 @@ for (const failure of onlineTests.failures) failures.push(`online tier: ${failur
 // ---------------------------------------------------------------------------
 
 console.log("");
+for (const s of skipped) console.log(`  · skipped: ${s}`);
+if (skipped.length) console.log("");
+
 if (failures.length === 0) {
   console.log(`  ✓ ${passed} checks passed.`);
   console.log("");

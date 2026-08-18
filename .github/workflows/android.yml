@@ -58,18 +58,21 @@ jobs:
         # break today because a dependency published a new patch version.
         run: npm ci
 
-      - name: Run the checks
-        # 290 checks on the data, the wiring and the Android configuration.
-        # Deliberately before the expensive part — if a phrasebook entry is
-        # missing a language there is no point spending five minutes on Gradle.
-        run: npm run verify
-
       - name: Bundle the web code and copy it into the Android project
         # www/app.js and android/.../assets/public are both gitignored, because
         # they are build output. So they do not exist on a fresh checkout and
         # must be regenerated here. Skipping this produces an app that installs
         # and then shows a white screen.
+        #
+        # This runs before the checks, not after, because two of them inspect
+        # exactly these generated files.
         run: npm run cap:sync
+
+      - name: Run the checks
+        # Checks on the data, the wiring and the Android configuration. Still
+        # ahead of the genuinely expensive step — Gradle — so a bad commit
+        # fails in seconds rather than after a five-minute compile.
+        run: npm run verify
 
       # ------------------------------------------------------------------
       # Android side

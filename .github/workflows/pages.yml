@@ -55,13 +55,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Build the web bundle
+        # Must come BEFORE the checks. www/app.js is generated and deliberately
+        # not in version control, so it does not exist on a fresh checkout —
+        # and two of the checks inspect the built output. Running the checks
+        # first made a perfectly good commit fail.
+        run: npm run build
+
       - name: Run the checks
         run: npm run verify
-
-      - name: Build the web bundle
-        # www/app.js is gitignored build output, so it does not exist on a fresh
-        # checkout and has to be produced here.
-        run: npm run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
