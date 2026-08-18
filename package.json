@@ -1,0 +1,39 @@
+{
+  "name": "amaleon-travel-translator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline travel translator for English, Bulgarian, Portuguese and Spanish. No internet, no server, no API key.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "npm install",
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "dev": "node scripts/dev.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/verify.mjs",
+    "cap:add:android": "npm run build && npx cap add android",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "android": "npm run build && npx cap sync android && npx cap open android",
+    "apk": "node scripts/apk.mjs",
+    "apk:release": "node scripts/apk.mjs --release"
+  },
+  "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
+    "@capacitor-community/text-to-speech": "^8.0.2",
+    "@capacitor-mlkit/language-identification": "^8.2.0",
+    "@capacitor-mlkit/translation": "^8.1.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "esbuild": "^0.25.0"
+  }
+}

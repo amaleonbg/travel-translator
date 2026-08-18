@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The green behind the adaptive launcher icon. Matches --accent in styles.css. -->
+    <color name="ic_launcher_background">#0D7A5F</color>
+</resources>

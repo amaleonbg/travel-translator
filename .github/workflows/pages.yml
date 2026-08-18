@@ -1,0 +1,94 @@
+# Publish the web app to a free public URL.
+#
+# GitHub Pages hosts static files for nothing, on HTTPS — which is not a detail:
+# browsers refuse the microphone, and refuse to install a web app to a home
+# screen, on anything less. So this gets you a link that works on Android and
+# iPhone with no store, no account and no cost.
+#
+# What it publishes is the contents of www/ after a build. Nothing else in the
+# repository is exposed.
+#
+# TWO THINGS TO KNOW BEFORE USING THIS FILE.
+#
+# 1. On the GitHub Free plan, Pages only publishes from a **public** repository.
+#    Publishing from a private one needs GitHub Pro. If you want the source to
+#    stay private and the hosting to stay free, use Cloudflare Pages instead —
+#    it connects to a private repo on its free tier, and needs no file like this
+#    one. See docs/LAUNCH.md.
+#
+# 2. Either way the published site is public to anyone with the link. Site
+#    visibility and repository visibility are separate settings. Treat the URL
+#    as shareable, not secret.
+
+name: Publish web app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "android/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deployments race. Unlike the APK build, an in-progress deploy is
+# not cancelled — a half-published site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run the checks
+        run: npm run verify
+
+      - name: Build the web bundle
+        # www/app.js is gitignored build output, so it does not exist on a fresh
+        # checkout and has to be produced here.
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
+        run: |
+          {
+            echo "### Web app published"
+            echo ""
+            echo "**${{ steps.deployment.outputs.page_url }}**"
+            echo ""
+            echo "Share that link. On Android, Chrome offers to install it."
+            echo "On iPhone, open it in Safari, tap Share, then Add to Home Screen."
+          } >> "$GITHUB_STEP_SUMMARY"

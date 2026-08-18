@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- viewport-fit=cover lets the layout run under a notch; the CSS pads
+         itself back out with env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Travel Translator — EN · BG · PT · ES</title>
+
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#0d7a5f" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)" />
+    <meta name="application-name" content="Travel Translator" />
+    <meta
+      name="description"
+      content="Offline translator for English, Bulgarian, Portuguese and Spanish. Works with no internet."
+    />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Translator" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="icons/icon-192.png" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🌍</span>
+        <div>
+          <h1>Travel Translator</h1>
+          <p class="brand-sub">English · Български · Português · Español</p>
+        </div>
+      </div>
+      <div class="status-chips">
+        <button id="installBtn" class="chip chip-action chip-hidden" type="button">Install</button>
+        <span id="offlineChip" class="chip chip-ok" title="This app does not need the internet">Works offline</span>
+        <span id="envChip" class="chip chip-neutral">Starting…</span>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ============================================================== -->
+      <!-- First run: the one thing that needs a connection               -->
+      <!-- ============================================================== -->
+      <div id="modelBanner" class="banner banner-warn banner-standalone hidden">
+        <div>
+          <strong>Download the language packs before you travel.</strong>
+          <span id="modelBannerText"></span>
+        </div>
+        <div class="banner-actions">
+          <button id="modelBannerBtn" class="btn-primary" type="button">Download now</button>
+          <button id="modelBannerDismiss" class="btn-ghost" type="button">Later</button>
+        </div>
+      </div>
+
+      <div id="iosInstallTip" class="install-tip hidden">
+        <span>
+          <strong>Add this to your Home Screen.</strong> Tap Share, then
+          <em>Add to Home Screen</em> — it then opens full-screen, like an app.
+        </span>
+        <button id="dismissTipBtn" class="tip-close" type="button" aria-label="Dismiss">×</button>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- SCREEN: Translate                                              -->
+      <!-- ============================================================== -->
+      <section class="screen" id="screen-translate">
+        <div class="card">
+          <h2>Compose a message</h2>
+
+          <!-- Who is doing what. No roles — just: are you speaking or typing,
+               and is the other person reading or listening. -->
+          <div class="lang-row">
+            <div class="lang-field">
+              <label for="activeMode">Active user <small>(sends)</small></label>
+              <select id="activeMode" aria-label="How the active user sends"></select>
+              <select id="sourceLang" aria-label="Language the active user is using"></select>
+            </div>
+
+            <button
+              id="swapBtn"
+              class="swap-btn"
+              type="button"
+              title="Swap both directions — languages and how each person is using the app"
+              aria-label="Swap direction"
+            >
+              ⇄
+            </button>
+
+            <div class="lang-field">
+              <label for="passiveMode">Passive user <small>(receives)</small></label>
+              <select id="passiveMode" aria-label="How the passive user receives"></select>
+              <select id="targetLang" aria-label="Language the passive user needs"></select>
+            </div>
+          </div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="autoDetect" />
+            <span>
+              Work out the language from what is written
+              <small
+                >Useful when someone else has typed into your phone and you are not sure what they
+                used. Checked against the four languages only.</small
+              >
+            </span>
+          </label>
+
+          <div id="speechNote" class="note note-warn hidden"></div>
+
+          <!-- Audio input -->
+          <div id="audioInput" class="recorder">
+            <button id="recordBtn" class="record-btn" type="button">
+              <span class="record-icon" aria-hidden="true"></span>
+              <span id="recordLabel">Hold the phone up and tap to speak</span>
+            </button>
+
+            <div class="recorder-meta">
+              <div id="timer" class="timer">0:00</div>
+              <div id="partialText" class="partial"></div>
+            </div>
+          </div>
+
+          <!-- Text input -->
+          <div id="textInput" class="text-input hidden">
+            <label for="typedMessage">Type the message</label>
+            <textarea
+              id="typedMessage"
+              rows="3"
+              maxlength="2000"
+              placeholder="Type what you want to say, in your own language."
+            ></textarea>
+            <div class="text-input-actions">
+              <span id="typedCount" class="hint">0 characters</span>
+              <button id="composeBtn" class="btn-primary" type="button">Continue</button>
+            </div>
+          </div>
+
+          <div class="test-label-row" id="labelRow">
+            <label for="clientLabel">Label <small>(optional — helps when reviewing later)</small></label>
+            <input
+              id="clientLabel"
+              type="text"
+              placeholder="e.g. pharmacy in Nessebar, noisy street"
+              maxlength="120"
+            />
+          </div>
+
+          <div id="statusMsg" class="status-msg"></div>
+        </div>
+
+        <!-- Review before sending -->
+        <section id="reviewCard" class="card hidden">
+          <div class="card-head">
+            <h2>Check before sending</h2>
+            <span id="reviewConfidence" class="tag"></span>
+          </div>
+
+          <div id="reviewUncertain" class="banner banner-warn hidden">
+            <strong>The phone was unsure what it heard.</strong>
+            <span id="reviewUncertainText"></span>
+          </div>
+
+          <div class="review-field">
+            <label for="editableText">
+              Your message
+              <small id="editableHint">Correct anything the phone got wrong before translating.</small>
+            </label>
+            <textarea id="editableText" rows="3" maxlength="2000"></textarea>
+          </div>
+
+          <div class="review-actions">
+            <button id="verifyBtn" class="btn-primary" type="button">Translate &amp; check</button>
+            <button id="cancelReviewBtn" class="btn-secondary" type="button">Discard</button>
+            <span id="verifyStatus" class="hint"></span>
+          </div>
+
+          <div id="verifyPanes" class="result-grid hidden">
+            <div class="result-pane result-pane-accent">
+              <div class="pane-head">
+                <h3 id="verifyTargetHead">They will see</h3>
+                <span id="verifyTargetTag" class="tag"></span>
+              </div>
+              <p id="verifyTranslated" class="result-text"></p>
+            </div>
+
+            <div class="result-pane">
+              <div class="pane-head">
+                <h3>Translated back, to check the meaning</h3>
+                <span id="verifyBackTag" class="tag"></span>
+              </div>
+              <p id="verifyBack" class="result-text"></p>
+              <p class="pane-note">
+                This is the translation put back into your own language. If it still says what you
+                meant, the message is safe to show. If it drifts, reword the text above — short,
+                plain sentences translate far better than long ones.
+              </p>
+            </div>
+          </div>
+
+          <div id="sendRow" class="review-actions hidden">
+            <button id="sendBtn" class="btn-primary" type="button">Show it to them</button>
+            <span class="hint" id="sendHint"></span>
+          </div>
+        </section>
+
+        <!-- Result -->
+        <section id="resultCard" class="card hidden">
+          <div class="card-head">
+            <h2>Result</h2>
+            <button id="bigTextBtn" class="btn-secondary" type="button">Show full screen</button>
+          </div>
+
+          <div id="deliveryBanner" class="banner banner-ok hidden">
+            <strong>Ready.</strong> <span id="deliveryText"></span>
+          </div>
+
+          <div id="audioOut" class="audio-out hidden">
+            <button id="replayBtn" class="btn-secondary" type="button">🔊 Read it aloud again</button>
+            <span id="ttsMeta" class="hint"></span>
+          </div>
+
+          <div id="uncertainBanner" class="banner banner-warn hidden">
+            <strong>Uncertain transcription.</strong>
+            <span id="uncertainText"></span>
+          </div>
+
+          <div class="result-grid">
+            <div class="result-pane">
+              <div class="pane-head">
+                <h3>Sent</h3>
+                <span id="originalLangTag" class="tag"></span>
+              </div>
+              <p id="originalText" class="result-text"></p>
+              <button class="copy-btn" data-copy="originalText" type="button">Copy</button>
+            </div>
+
+            <div class="result-pane result-pane-accent">
+              <div class="pane-head">
+                <h3>Received</h3>
+                <span id="translatedLangTag" class="tag"></span>
+              </div>
+              <p id="translatedText" class="result-text"></p>
+              <p id="engineNote" class="pane-note"></p>
+              <button class="copy-btn" data-copy="translatedText" type="button">Copy</button>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <div
+              class="metric"
+              title="How much of your original wording survived being translated and translated back. High is reassuring; low often just means the language reshaped the sentence."
+            >
+              <span class="metric-label">Meaning match</span>
+              <span id="meaningValue" class="metric-value">—</span>
+              <div class="confidence-track"><div id="meaningBar" class="confidence-fill"></div></div>
+            </div>
+            <div
+              class="metric"
+              title="Only some recognisers report how sure they were. On-device recognition usually does not, and this app will not invent a number."
+            >
+              <span class="metric-label">Heard clearly</span>
+              <span id="confidenceValue" class="metric-value">—</span>
+              <div class="confidence-track"><div id="confidenceBar" class="confidence-fill"></div></div>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Speech</span>
+              <span id="sttMs" class="metric-value">—</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Translation</span>
+              <span id="translateMs" class="metric-value">—</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Total</span>
+              <span id="totalMs" class="metric-value">—</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Spoken for</span>
+              <span id="audioSeconds" class="metric-value">—</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Detected</span>
+              <span id="detectedLang" class="metric-value">—</span>
+            </div>
+          </div>
+
+          <div class="rating-row">
+            <span class="rating-label">Was this actually correct?</span>
+            <div id="ratingButtons" class="rating-buttons">
+              <button type="button" data-rating="1" title="Wrong / unusable">1</button>
+              <button type="button" data-rating="2" title="Major errors">2</button>
+              <button type="button" data-rating="3" title="Understandable, some errors">3</button>
+              <button type="button" data-rating="4" title="Minor errors only">4</button>
+              <button type="button" data-rating="5" title="Perfect">5</button>
+            </div>
+            <span id="ratingSaved" class="rating-saved"></span>
+          </div>
+
+          <div class="review-actions">
+            <button id="newMessageBtn" class="btn-primary" type="button">New message</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SCREEN: Phrasebook                                              -->
+      <!-- ============================================================== -->
+      <section class="screen hidden" id="screen-phrasebook">
+        <div class="card">
+          <div class="card-head">
+            <h2>Phrasebook</h2>
+            <span class="hint" id="phrasebookPair"></span>
+          </div>
+          <p class="pane-note">
+            Ready-made sentences that need no translation engine at all — they are built into the
+            app. Tap one to load it into the message box, or tap the speaker to have the phone
+            say it.
+          </p>
+          <input
+            id="phraseSearch"
+            class="search-input"
+            type="search"
+            placeholder="Search — try 'pharmacy', 'ticket', 'allergic'"
+            aria-label="Search phrases"
+          />
+          <div id="phraseList" class="phrase-list"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SCREEN: Message Log                                             -->
+      <!-- ============================================================== -->
+      <section class="screen hidden" id="screen-log">
+        <div class="card">
+          <div class="card-head">
+            <h2>Message Log</h2>
+            <div class="card-actions">
+              <span id="selectionCount" class="selection-count hidden"></span>
+              <button id="deleteSelectedBtn" class="btn-secondary btn-danger hidden" type="button">
+                Delete
+              </button>
+              <button id="exportSelectedBtn" class="btn-secondary hidden" type="button">
+                Export selected
+              </button>
+              <button id="refreshBtn" class="btn-secondary" type="button">Refresh</button>
+              <button id="exportBtn" class="btn-secondary" type="button">Export CSV</button>
+            </div>
+          </div>
+
+          <p class="pane-note">
+            Every message stays on this phone. Nothing is uploaded anywhere, and deleting a row
+            here deletes it for good.
+          </p>
+
+          <div class="table-wrap">
+            <table id="runsTable">
+              <thead>
+                <tr>
+                  <th class="select-col">
+                    <div class="select-head">
+                      <input
+                        type="checkbox"
+                        id="selectAll"
+                        class="row-check"
+                        title="Select all on this page"
+                        aria-label="Select all messages"
+                      />
+                      <button
+                        type="button"
+                        id="selectMenuBtn"
+                        class="select-caret"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        title="Selection options"
+                      >
+                        ▾
+                      </button>
+                    </div>
+                  </th>
+                  <th>#</th>
+                  <th>When</th>
+                  <th>Who</th>
+                  <th>Lang</th>
+                  <th>Sent</th>
+                  <th>Received</th>
+                  <th>Rating</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="runsBody">
+                <tr>
+                  <td colspan="9" class="empty">No messages yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SCREEN: Settings                                                -->
+      <!-- ============================================================== -->
+      <section class="screen hidden" id="screen-settings">
+        <div class="card">
+          <h2>Offline language packs</h2>
+          <p class="pane-note">
+            These are what make the app work with no signal. Download them on Wi-Fi before you
+            travel — each is around 30&nbsp;MB, downloaded once and kept. English cannot be removed
+            because every translation passes through it internally.
+          </p>
+          <div id="modelList" class="model-list"></div>
+          <div class="review-actions">
+            <button id="downloadAllBtn" class="btn-primary" type="button">Download everything missing</button>
+            <span id="modelStatus" class="hint"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Using the internet</h2>
+          <label class="checkbox-row">
+            <input type="checkbox" id="useInternetToggle" />
+            <span>
+              Use the internet when it is available
+              <small id="useInternetHint"></small>
+            </span>
+          </label>
+          <div id="internetNote" class="note note-warn hidden"></div>
+        </div>
+
+        <div class="card">
+          <h2>How the phone behaves</h2>
+          <label class="checkbox-row">
+            <input type="checkbox" id="autoSpeakToggle" />
+            <span>
+              Read the translation aloud automatically
+              <small>When the passive user is set to Audio, speak the result as soon as it is ready.</small>
+            </span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="bigTextToggle" />
+            <span>
+              Always open the result full screen
+              <small>Large text on a plain background — easier to hold up for someone else to read.</small>
+            </span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="testToolsToggle" />
+            <span>
+              Show review tools
+              <small>The 1–5 accuracy rating, the label box and CSV export. Leave on while testing.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="card">
+          <h2>What works without internet</h2>
+          <div id="capabilityList" class="capability-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Privacy</h2>
+          <p class="pane-note">
+            This app has no server and no account. Translation happens on the phone using the
+            downloaded packs. Messages are stored only on this device, and are removed when the app
+            is uninstalled. The only time it uses the internet is downloading a language pack.
+          </p>
+          <div class="review-actions">
+            <button id="clearLogBtn" class="btn-secondary btn-danger" type="button">
+              Delete every message
+            </button>
+            <span id="clearLogStatus" class="hint"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Full-screen result, for holding up to the other person -->
+    <div id="bigTextOverlay" class="big-overlay hidden" role="dialog" aria-modal="true">
+      <button id="bigTextClose" class="big-close" type="button" aria-label="Close">×</button>
+      <div class="big-inner">
+        <p id="bigTextLang" class="big-lang"></p>
+        <p id="bigTextBody" class="big-body"></p>
+        <button id="bigSpeakBtn" class="btn-primary big-speak" type="button">🔊 Read aloud</button>
+      </div>
+    </div>
+
+    <nav class="tabbar" role="tablist">
+      <button class="tab is-active" data-screen="translate" role="tab" type="button">
+        <span aria-hidden="true">💬</span><span>Translate</span>
+      </button>
+      <button class="tab" data-screen="phrasebook" role="tab" type="button">
+        <span aria-hidden="true">📖</span><span>Phrases</span>
+      </button>
+      <button class="tab" data-screen="log" role="tab" type="button">
+        <span aria-hidden="true">🗒️</span><span>Log</span>
+      </button>
+      <button class="tab" data-screen="settings" role="tab" type="button">
+        <span aria-hidden="true">⚙️</span><span>Settings</span>
+      </button>
+    </nav>
+
+    <div id="selectMenu" class="select-menu hidden" role="menu">
+      <button type="button" role="menuitem" data-select="all">All</button>
+      <button type="button" role="menuitem" data-select="none">None</button>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

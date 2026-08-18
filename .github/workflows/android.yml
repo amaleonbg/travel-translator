@@ -1,0 +1,136 @@
+# Build the Android app in the cloud.
+#
+# Nothing here runs on your laptop. GitHub gives you a fresh Linux machine, it
+# installs Node, Java and the Android tools, builds the app, and hands back an
+# installable .apk file. You install nothing.
+#
+# Cost: an Android build is a Linux build, and the GitHub Free plan includes
+# 2,000 Linux minutes a month for private repositories. This takes about five,
+# so roughly 250 builds a month are free.
+#
+# It runs automatically on every push to main, and you can also start one by
+# hand from the Actions tab (that is what workflow_dispatch means).
+
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    # Documentation changes should not spend build minutes.
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# If you push twice in quick succession, cancel the older run rather than
+# paying for a build of code you have already replaced.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # Web side
+      # ------------------------------------------------------------------
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # Caches ~/.npm between runs, which turns a 60-second install into
+          # about 10.
+          cache: "npm"
+
+      - name: Install dependencies
+        # `npm ci` rather than `npm install`: it installs exactly what
+        # package-lock.json says, so a build that worked yesterday cannot
+        # break today because a dependency published a new patch version.
+        run: npm ci
+
+      - name: Run the checks
+        # 290 checks on the data, the wiring and the Android configuration.
+        # Deliberately before the expensive part — if a phrasebook entry is
+        # missing a language there is no point spending five minutes on Gradle.
+        run: npm run verify
+
+      - name: Bundle the web code and copy it into the Android project
+        # www/app.js and android/.../assets/public are both gitignored, because
+        # they are build output. So they do not exist on a fresh checkout and
+        # must be regenerated here. Skipping this produces an app that installs
+        # and then shows a white screen.
+        run: npm run cap:sync
+
+      # ------------------------------------------------------------------
+      # Android side
+      # ------------------------------------------------------------------
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Set up the Android SDK
+        # The runner image already ships an Android SDK, but which platform
+        # versions it carries changes over time. Being explicit means the build
+        # does not start failing the month GitHub rotates its image.
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0 platform-tools"
+
+      - name: Build the APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      # ------------------------------------------------------------------
+      # Collect the result
+      # ------------------------------------------------------------------
+
+      - name: Name the file with the run number
+        id: name
+        run: |
+          echo "apk=travel-translator-debug-${{ github.run_number }}.apk" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             "travel-translator-debug-${{ github.run_number }}.apk"
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.apk }}
+          path: ${{ steps.name.outputs.apk }}
+          # The default is 90 days. Debug builds go stale long before that, and
+          # artifacts count against the free storage allowance.
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Summary
+        # Writes a short note at the top of the run page, so you can see what
+        # you got without digging through the log.
+        run: |
+          SIZE=$(du -h "${{ steps.name.outputs.apk }}" | cut -f1)
+          {
+            echo "### Android build ${{ github.run_number }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`${{ steps.name.outputs.apk }}\` |"
+            echo "| Size | $SIZE |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo ""
+            echo "Download it from the **Artifacts** section at the bottom of this page."
+            echo "It arrives as a .zip — extract it, then tap the .apk on your phone."
+          } >> "$GITHUB_STEP_SUMMARY"

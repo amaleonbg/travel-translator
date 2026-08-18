@@ -1,0 +1,16 @@
+{
+  "appId": "com.amaleon.traveltranslator",
+  "appName": "Travel Translator",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SpeechRecognition": {
+      "androidxCoreVersion": "1.13.1"
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
