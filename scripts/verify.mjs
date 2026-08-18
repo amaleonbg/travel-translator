@@ -358,6 +358,38 @@ const onlineTests = (await import(pathToFileURL(join(root, "scripts/test-online.
 passed += onlineTests.passed;
 for (const failure of onlineTests.failures) failures.push(`online tier: ${failure}`);
 
+
+// ---------------------------------------------------------------------------
+// 11. The empty-array-is-truthy trap
+// ---------------------------------------------------------------------------
+//
+// `speechSynthesis.getVoices()` returns [] on the first call in Chrome — the
+// list arrives asynchronously. Caching that with a plain `if (cache)` locks in
+// "this phone has no voices" for the whole session, because [] is truthy.
+// This actually happened: the app told a user his phone had no Bulgarian voice
+// when the list simply had not loaded yet.
+
+const speakerSource = await readFile(join(root, "src/js/engine/speaker.js"), "utf8");
+check(
+  "the voice list waits for the browser's voiceschanged event",
+  /voiceschanged/.test(speakerSource),
+  "without it, getVoices() is read too early and reports nothing"
+);
+check(
+  "an empty voice list is never cached as the final answer",
+  /voiceCache && voiceCache\.length/.test(speakerSource),
+  "`if (voiceCache)` is true for [], which is the bug"
+);
+check(
+  "waiting for voices has a timeout",
+  /timeoutMs/.test(speakerSource),
+  "a phone with no engine never fires the event"
+);
+check(
+  "the cache can be cleared after a voice is installed",
+  /export function forgetVoices/.test(speakerSource)
+);
+
 // ---------------------------------------------------------------------------
 
 console.log("");

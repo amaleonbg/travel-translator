@@ -145,7 +145,10 @@ try {
 
   // --- settings ------------------------------------------------------------
   await page.click('.tab[data-screen="settings"]');
-  await page.waitForTimeout(500);
+  // The capability table waits for the browser's voice list, which is only
+  // announced asynchronously — and never at all in a headless browser with no
+  // speech engine, so allow for the timeout.
+  await page.waitForSelector(".capability-row", { timeout: 8000 });
   check("four language packs listed", (await page.locator(".model-row").count()) === 4);
   check("the internet toggle exists", (await page.locator("#useInternetToggle").count()) === 1);
   check(

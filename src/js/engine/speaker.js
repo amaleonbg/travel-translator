@@ -28,8 +28,72 @@ function nativeAvailable() {
 
 let voiceCache = null;
 
+/**
+ * Ask the browser for its voices, waiting if it is not ready yet.
+ *
+ * `speechSynthesis.getVoices()` returns an EMPTY ARRAY on the first call in
+ * Chrome — the list is populated asynchronously and announced by a
+ * `voiceschanged` event. Reading it once during start-up therefore reports
+ * "this phone has no voices at all", which is wrong on every phone.
+ *
+ * This cost a real false alarm: the app told a user his phone had no Bulgarian
+ * voice when the voice list simply had not arrived yet.
+ */
+let voicesPromise = null;
+
+function loadWebVoices(timeoutMs = 1500) {
+  // Share one wait between callers. The Settings screen asks about four
+  // languages in a row; without this, a phone with no speech engine would sit
+  // there for four separate timeouts before drawing anything.
+  if (voicesPromise) return voicesPromise;
+
+  voicesPromise = new Promise((resolve) => {
+    if (typeof speechSynthesis === "undefined") {
+      resolve([]);
+      return;
+    }
+
+    const immediate = speechSynthesis.getVoices();
+    if (immediate.length) {
+      resolve(immediate);
+      return;
+    }
+
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      speechSynthesis.removeEventListener("voiceschanged", finish);
+      clearTimeout(timer);
+      resolve(speechSynthesis.getVoices());
+    };
+
+    speechSynthesis.addEventListener("voiceschanged", finish);
+    // A phone that genuinely has no engine never fires the event, so do not
+    // wait for ever.
+    const timer = setTimeout(finish, timeoutMs);
+  });
+
+  return voicesPromise;
+}
+
+// If the user installs a voice while the app is open, Android announces it.
+// Dropping the cache here means the Settings screen tells the truth on the next
+// look, without the user having to restart anything.
+if (typeof speechSynthesis !== "undefined" && speechSynthesis.addEventListener) {
+  speechSynthesis.addEventListener("voiceschanged", () => {
+    if (speechSynthesis.getVoices().length) {
+      voiceCache = null;
+      voicesPromise = null;
+    }
+  });
+}
+
 export async function supportedVoiceLanguages() {
-  if (voiceCache) return voiceCache;
+  // Cache only a USEFUL answer. An empty array is truthy in JavaScript, so the
+  // obvious `if (voiceCache)` would lock in the "no voices" answer for the rest
+  // of the session — which is exactly the bug this guards against.
+  if (voiceCache && voiceCache.length) return voiceCache;
 
   if (nativeAvailable()) {
     try {
@@ -37,14 +101,19 @@ export async function supportedVoiceLanguages() {
       voiceCache = (languages || []).map(String);
       return voiceCache;
     } catch {
-      voiceCache = [];
-      return voiceCache;
+      return [];
     }
   }
 
-  const voices = typeof speechSynthesis !== "undefined" ? speechSynthesis.getVoices() : [];
+  const voices = await loadWebVoices();
   voiceCache = voices.map((v) => v.lang);
   return voiceCache;
+}
+
+/** Forget the cached list — used when the user may have installed a voice. */
+export function forgetVoices() {
+  voiceCache = null;
+  voicesPromise = null;
 }
 
 /** Is there a voice on this device for this language? */
@@ -69,7 +138,13 @@ export async function canSpeak(languageCode) {
 export async function voiceNote(languageCode) {
   const lang = resolveLanguage(languageCode);
   if (await canSpeak(languageCode)) return null;
-  return `This phone has no ${lang.label} voice installed, so it cannot read the translation aloud. On Android: Settings → System → Languages & input → Text-to-speech output → install the ${lang.label} voice data. The written translation still works.`;
+  return (
+    `No ${lang.label} voice is installed on this phone, so it cannot read the translation aloud — ` +
+    `the written translation is unaffected. To add one: Settings → Additional settings → ` +
+    `Languages & input → Text-to-speech output → the gear beside your engine → Install voice data → ` +
+    `${lang.label}. If ${lang.label} is not offered there, no engine on this phone provides it; ` +
+    `showing them the screen works just as well.`
+  );
 }
 
 /**
