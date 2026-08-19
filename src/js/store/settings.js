@@ -22,6 +22,8 @@ export const DEFAULTS = {
   bigText: false,
   modelPromptSeen: false,
   showTestTools: true,
+  // null means "not chosen yet" — the first run guesses from the phone.
+  uiLanguage: null,
   // Overridden per platform below — see internetDefault().
   useInternet: false,
 };

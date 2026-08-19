@@ -28,6 +28,8 @@
  */
 const CONTACT_EMAIL = "";
 
+import { t } from "../i18n.js";
+
 const ENDPOINT = "https://api.mymemory.translated.net/get";
 
 /** The service rejects anything longer, so we split rather than lose the tail. */
@@ -91,7 +93,7 @@ async function translateChunk(text, pair, signal) {
     }
     throw new OnlineTranslationError(
       "NETWORK",
-      "Could not reach the online translator. Check your connection, or turn the internet option off in Settings to use this phone's own engine."
+      t("err.online")
     );
   }
 
@@ -109,7 +111,7 @@ async function translateChunk(text, pair, signal) {
     if (/quota|limit|exceed/i.test(detail)) {
       throw new OnlineTranslationError(
         "QUOTA_EXCEEDED",
-        "The free daily online allowance is used up. It resets tomorrow — until then, turn the internet option off in Settings to use this phone's own engine."
+        t("err.quota")
       );
     }
     throw new OnlineTranslationError("SERVICE_ERROR", detail || "The online translator refused the request.");

@@ -19,6 +19,7 @@
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { isNative, hasPlugin, platform } from "./platform.js";
 import { resolveLanguage } from "../languages.js";
+import { t } from "../i18n.js";
 
 export class SpeechError extends Error {
   constructor(code, message) {
@@ -95,7 +96,7 @@ export async function speechSupportNote(languageCode) {
   const support = await speechSupport(languageCode);
   switch (support) {
     case "yes":
-      return { support, note: `${lang.label} speech works offline on this phone.` };
+      return { support, note: t("speech.offlineOk", { lang: lang.label }) };
     case "pack":
       // The important half of this sentence is the first half. Android falls
       // back to Google's online recogniser automatically, so speaking Bulgarian
@@ -103,12 +104,12 @@ export async function speechSupportNote(languageCode) {
       // not, which sent people to typing unnecessarily.
       return {
         support,
-        note: `Speaking ${lang.label} works, but uses the internet on this phone. To make it work with no signal too, install the offline pack: the Google app → Settings → Voice → Offline speech recognition → ${lang.label}. Typing is always offline.`,
+        note: t("speech.needsPack", { lang: lang.label }),
       };
     case "no":
       return {
         support,
-        note: `This phone has no built-in recogniser for spoken ${lang.label}, so speaking it needs an internet connection. Type the message instead — typing is always offline and always accurate.`,
+        note: t("speech.needsInternet", { lang: lang.label }),
       };
     default:
       return { support, note: "" };
@@ -158,14 +159,14 @@ async function listenNative(lang, onPartial, maxResults) {
     if (asked !== "granted") {
       throw new SpeechError(
         "PERMISSION_DENIED",
-        "Microphone access was refused. Allow it in your phone's settings, or type the message instead."
+        t("err.micDenied")
       );
     }
   }
 
   const available = await SpeechRecognition.available().catch(() => ({ available: false }));
   if (!available?.available) {
-    throw new SpeechError("UNAVAILABLE", "This phone has no speech recogniser available. Type the message instead.");
+    throw new SpeechError("UNAVAILABLE", t("err.noRecogniser"));
   }
 
   let partialHandle = null;
@@ -188,7 +189,7 @@ async function listenNative(lang, onPartial, maxResults) {
     const matches = result?.matches || [];
     const transcript = String(matches[0] || "").trim();
     if (!transcript) {
-      throw new SpeechError("NO_SPEECH_DETECTED", "Nothing was heard. Try again, closer to the microphone, or type it instead.");
+      throw new SpeechError("NO_SPEECH_DETECTED", t("err.noSpeech"));
     }
     return { transcript, alternatives: matches.slice(1), engine: "native" };
   } finally {
@@ -235,7 +236,7 @@ function listenWeb(lang, onPartial) {
     recogniser.onend = () => {
       const transcript = finalText.trim();
       if (!transcript) {
-        reject(new SpeechError("NO_SPEECH_DETECTED", "Nothing was heard. Try again, or type it instead."));
+        reject(new SpeechError("NO_SPEECH_DETECTED", t("err.noSpeech")));
         return;
       }
       resolve({ transcript, alternatives: [], engine: "web-speech" });

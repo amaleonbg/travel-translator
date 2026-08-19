@@ -18,6 +18,7 @@ import { isNative, hasPlugin } from "./platform.js";
 import { translateOnline, looksOnline, OnlineTranslationError } from "./online-translator.js";
 import { lookup } from "../data/phrasebook.js";
 import { resolveLanguage } from "../languages.js";
+import { t } from "../i18n.js";
 
 /**
  * Whether the user has allowed the internet tier.
@@ -190,7 +191,7 @@ function failureMessage(attempts, target) {
   if (code === "NO_ENGINE_AVAILABLE") {
     return isNative()
       ? "No translation engine is available. Download the language packs in Settings."
-      : "This is the web version, which has no translation engine of its own on a phone. Turn on “Use the internet” in Settings, or install the Android app for full offline translation. The built-in phrases still work either way.";
+      : t("err.noEngineWeb");
   }
   return `Translation failed. ${attempts.map((a) => a.error).join(" ")}`;
 }
@@ -246,13 +247,13 @@ export async function translateAndVerify({ text, sourceLanguage, targetLanguage 
 export function engineLabel(engine) {
   switch (engine) {
     case "mlkit":
-      return "Translated on this phone";
+      return t("engine.onDevice");
     case "online":
-      return "Translated over the internet";
+      return t("engine.online");
     case "phrasebook":
-      return "From the built-in phrases";
+      return t("engine.phrasebook");
     case "passthrough":
-      return "Same language — nothing to translate";
+      return t("engine.passthrough");
     default:
       return "";
   }

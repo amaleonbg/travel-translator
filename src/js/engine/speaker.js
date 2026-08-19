@@ -13,6 +13,7 @@
 import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { isNative, hasPlugin } from "./platform.js";
 import { resolveLanguage } from "../languages.js";
+import { t } from "../i18n.js";
 
 export class SpeakError extends Error {
   constructor(code, message) {
@@ -138,13 +139,7 @@ export async function canSpeak(languageCode) {
 export async function voiceNote(languageCode) {
   const lang = resolveLanguage(languageCode);
   if (await canSpeak(languageCode)) return null;
-  return (
-    `No ${lang.label} voice is installed on this phone, so it cannot read the translation aloud — ` +
-    `the written translation is unaffected. To add one: Settings → Additional settings → ` +
-    `Languages & input → Text-to-speech output → the gear beside your engine → Install voice data → ` +
-    `${lang.label}. If ${lang.label} is not offered there, no engine on this phone provides it; ` +
-    `showing them the screen works just as well.`
-  );
+  return t("voice.none", { lang: lang.label });
 }
 
 /**

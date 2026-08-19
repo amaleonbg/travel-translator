@@ -21,6 +21,8 @@ export const PASSIVE_MODES = [
   { code: "audio", label: "Audio (listens)" },
 ];
 
+import { t } from "./i18n.js";
+
 export function normaliseMode(value, fallback) {
   return value === "audio" || value === "text" ? value : fallback;
 }
@@ -31,7 +33,7 @@ export function modeLabel(list, code) {
 
 /** "Speaks → Listens" — the compact form used in the Message Log's Who column. */
 export function describeExchange(activeMode, passiveMode) {
-  const a = activeMode === "audio" ? "Speaks" : "Types";
-  const p = passiveMode === "audio" ? "Listens" : "Reads";
+  const a = t(activeMode === "audio" ? "mode.speaks" : "mode.types");
+  const p = t(passiveMode === "audio" ? "mode.listens" : "mode.reads");
   return `${a} → ${p}`;
 }

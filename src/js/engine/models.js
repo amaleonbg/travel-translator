@@ -17,6 +17,7 @@ import { Translation } from "@capacitor-mlkit/translation";
 import { Network } from "@capacitor/network";
 import { isNative, hasPlugin } from "./platform.js";
 import { LANGUAGES, PIVOT_LANGUAGE } from "../languages.js";
+import { t } from "../i18n.js";
 
 /** Roughly what each pack costs on disk. ML Kit's own documented figure. */
 export const APPROX_MODEL_MB = 30;
@@ -100,7 +101,7 @@ export async function downloadModel(code) {
   if (!net.connected) {
     throw new ModelError(
       "OFFLINE",
-      "There is no connection. Language packs are the one thing this app needs the internet for — download them before you travel, then everything works offline."
+      t("models.offline")
     );
   }
   try {
@@ -116,7 +117,7 @@ export async function deleteModel(code) {
   if (code === PIVOT_LANGUAGE) {
     throw new ModelError(
       "PIVOT_REQUIRED",
-      "English cannot be removed. Every translation passes through English internally, so deleting it would break all four languages."
+      t("models.pivotRequired")
     );
   }
   try {
