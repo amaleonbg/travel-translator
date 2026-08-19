@@ -14,6 +14,7 @@
  * and a stranger acting on it, and it costs one tap.
  */
 import { LANGUAGES, languageLabel, languageNative, resolveLanguage } from "./languages.js";
+import { UI_LANGUAGES, t, setUiLanguage, applyTranslations, deviceLanguage, uiLanguage } from "./i18n.js";
 import { ACTIVE_MODES, PASSIVE_MODES, describeExchange } from "./modes.js";
 import { environmentLabel, isNative, platform } from "./engine/platform.js";
 import {
@@ -58,7 +59,7 @@ const IDS = [
   "resultCard", "bigTextBtn", "deliveryBanner", "deliveryText", "audioOut", "replayBtn",
   "ttsMeta", "uncertainBanner", "uncertainText", "originalLangTag", "originalText",
   "translatedLangTag", "translatedText", "engineNote",
-  "useInternetToggle", "useInternetHint", "internetNote",
+  "useInternetToggle", "useInternetHint", "internetNote", "uiLang",
   "meaningValue", "meaningBar", "confidenceValue", "confidenceBar",
   "sttMs", "translateMs", "totalMs", "audioSeconds", "detectedLang",
   "ratingButtons", "ratingSaved", "newMessageBtn",
@@ -88,11 +89,16 @@ async function boot() {
   state.settings = await loadSettings();
   setAllowInternet(state.settings.useInternet);
 
+  // Interface language first: everything drawn below depends on it.
+  setUiLanguage(state.settings.uiLanguage || deviceLanguage());
+  buildUiLanguagePicker();
+  applyTranslations();
+
   buildPickers();
   applySettingsToUi();
   wireEverything();
 
-  els.envChip.textContent = environmentLabel();
+  els.envChip.textContent = isNative() ? environmentLabel() : t("chip.browserPreview");
   els.envChip.classList.toggle("chip-warn", !isNative());
   refreshModeChip();
   window.addEventListener("online", refreshModeChip);
@@ -106,13 +112,33 @@ async function boot() {
 }
 
 function buildPickers() {
-  for (const mode of ACTIVE_MODES) els.activeMode.append(new Option(mode.label, mode.code));
-  for (const mode of PASSIVE_MODES) els.passiveMode.append(new Option(mode.label, mode.code));
+  rebuildModePickers();
+  rebuildLanguagePickers();
+}
+
+/**
+ * The two language dropdowns.
+ *
+ * Each option leads with the language's own name — a Bulgarian speaker scans
+ * for "Български", not for a translated word — and follows it with the name in
+ * whatever interface language is active, so the list is still readable to
+ * someone who does not know the script.
+ */
+function rebuildLanguagePickers() {
+  const source = els.sourceLang.value || state.settings.sourceLanguage;
+  const target = els.targetLang.value || state.settings.targetLanguage;
+  els.sourceLang.innerHTML = "";
+  els.targetLang.innerHTML = "";
   for (const lang of LANGUAGES) {
-    const label = `${lang.flag} ${lang.label}${lang.native !== lang.label ? ` — ${lang.native}` : ""}`;
+    const inUiLanguage = languageLabel(lang.code);
+    const label = `${lang.flag} ${lang.native}${
+      inUiLanguage !== lang.native ? ` — ${inUiLanguage}` : ""
+    }`;
     els.sourceLang.append(new Option(label, lang.code));
     els.targetLang.append(new Option(label, lang.code));
   }
+  if (source) els.sourceLang.value = source;
+  if (target) els.targetLang.value = target;
 }
 
 function applySettingsToUi() {
@@ -186,17 +212,23 @@ function wireEverything() {
     syncInputMode();
     await refreshSpeechNote();
     renderPhrases($("phraseSearch")?.value || "");
-    toast(`Now ${languageLabel(els.sourceLang.value)} → ${languageLabel(els.targetLang.value)}`);
+    toast(t("compose.nowDirection", { from: languageLabel(els.sourceLang.value), to: languageLabel(els.targetLang.value) }));
   });
 
   els.autoDetect.addEventListener("change", () => persist({ autoDetect: els.autoDetect.checked }));
+
+  els.uiLang.addEventListener("change", async () => {
+    setUiLanguage(els.uiLang.value);
+    await persist({ uiLanguage: els.uiLang.value });
+    await retranslate();
+  });
 
   // Compose
   els.recordBtn.addEventListener("click", toggleRecording);
   els.composeBtn.addEventListener("click", composeFromText);
   els.typedMessage.addEventListener("input", () => {
     const count = els.typedMessage.value.length;
-    els.typedCount.textContent = `${count} character${count === 1 ? "" : "s"}`;
+    els.typedCount.textContent = t("compose.characters", { n: count });
   });
 
   // Review
@@ -224,7 +256,7 @@ function wireEverything() {
     btn.addEventListener("click", async () => {
       const source = $(btn.dataset.copy);
       const ok = await copyText(source?.textContent || "");
-      toast(ok ? "Copied." : "Could not copy on this device.");
+      toast(t(ok ? "result.copied" : "result.copyFailed"));
     });
   });
 
@@ -305,21 +337,21 @@ function refreshModeChip() {
   els.offlineChip.classList.remove("chip-ok", "chip-warn");
 
   if (onDevice && !usingInternet) {
-    els.offlineChip.textContent = "Works offline";
+    els.offlineChip.textContent = t("chip.offline");
     els.offlineChip.classList.add("chip-ok");
     els.offlineChip.title = "Translation happens on this phone. Nothing is sent anywhere.";
   } else if (onDevice && usingInternet) {
-    els.offlineChip.textContent = "Online, offline backup";
+    els.offlineChip.textContent = t("chip.onlineWithBackup");
     els.offlineChip.classList.add("chip-ok");
     els.offlineChip.title =
       "Using the internet for better translation, falling back to this phone if the signal drops.";
   } else if (usingInternet) {
-    els.offlineChip.textContent = "Needs internet";
+    els.offlineChip.textContent = t("chip.needsInternet");
     els.offlineChip.classList.add("chip-warn");
     els.offlineChip.title =
       "This is the web version. No phone browser can translate on-device, so free text needs a connection. The built-in phrases still work offline.";
   } else {
-    els.offlineChip.textContent = "Phrases only";
+    els.offlineChip.textContent = t("chip.phrasesOnly");
     els.offlineChip.classList.add("chip-warn");
     els.offlineChip.title =
       "No translation engine is available: the web version with the internet option off can only use the built-in phrases.";
@@ -329,16 +361,62 @@ function refreshModeChip() {
 /** Explains, on the Settings screen, what the toggle actually changes here. */
 function refreshInternetHint() {
   const onDevice = onDeviceAvailable();
-  els.useInternetHint.textContent = onDevice
-    ? "This phone can already translate on its own. Turning this on uses an online translator instead when there is a signal, which is usually better on Bulgarian — but it means the text leaves your phone."
-    : "The web version has no translation engine of its own, because no phone browser provides one. Without this, only the built-in phrases work.";
+  els.useInternetHint.textContent = t(
+    onDevice ? "settings.internetHintNative" : "settings.internetHintWeb"
+  );
 
   const stranded = !onDevice && !state.settings.useInternet;
   show(els.internetNote, stranded);
   if (stranded) {
-    els.internetNote.textContent =
-      "With this off, this web version can only use the built-in phrases. For full translation with no internet at all, install the Android app.";
+    els.internetNote.textContent = t("settings.internetOffWarning");
   }
+}
+
+
+/**
+ * The interface-language picker.
+ *
+ * Each option shows the language in its OWN language — "Български", not
+ * "Bulgarian". Someone looking for their language recognises it written the
+ * way they write it, not translated into one they cannot read.
+ */
+function buildUiLanguagePicker() {
+  els.uiLang.innerHTML = "";
+  for (const lang of UI_LANGUAGES) {
+    els.uiLang.append(new Option(`${lang.flag} ${lang.label}`, lang.code));
+  }
+  els.uiLang.value = uiLanguage();
+}
+
+/**
+ * Redraw everything after a language change.
+ *
+ * `applyTranslations()` handles the static markup; these are the parts built
+ * in JavaScript, which it cannot reach.
+ */
+async function retranslate() {
+  applyTranslations();
+  rebuildModePickers();
+  rebuildLanguagePickers();
+  refreshModeChip();
+  refreshInternetHint();
+  els.envChip.textContent = isNative() ? environmentLabel() : t("chip.browserPreview");
+  els.typedMessage.dispatchEvent(new Event("input"));
+  renderPhrases($("phraseSearch")?.value || "");
+  await Promise.all([refreshLog(), renderModels(), renderCapabilities()]);
+  await refreshSpeechNote();
+}
+
+/** The two mode dropdowns hold translated labels, so they are rebuilt too. */
+function rebuildModePickers() {
+  const active = els.activeMode.value || state.settings.activeMode;
+  const passive = els.passiveMode.value || state.settings.passiveMode;
+  els.activeMode.innerHTML = "";
+  els.passiveMode.innerHTML = "";
+  els.activeMode.append(new Option(t("mode.audioSpeaks"), "audio"), new Option(t("mode.textTypes"), "text"));
+  els.passiveMode.append(new Option(t("mode.textReads"), "text"), new Option(t("mode.audioListens"), "audio"));
+  els.activeMode.value = active;
+  els.passiveMode.value = passive;
 }
 
 async function persist(patch) {
@@ -351,7 +429,7 @@ function guardSameLanguage(changed) {
   const other = LANGUAGES.find((l) => l.code !== els.sourceLang.value);
   if (changed === "source") els.targetLang.value = other.code;
   else els.sourceLang.value = other.code;
-  toast("The two languages must be different.");
+  toast(t("compose.sameLanguage"));
 }
 
 function switchScreen(name) {
@@ -380,11 +458,9 @@ async function checkLanguagePacks() {
   const missing = await missingLanguages();
   if (missing.length === 0) return;
 
-  els.modelBannerText.textContent =
-    ` ${missing.map(languageLabel).join(", ")} ${missing.length === 1 ? "is" : "are"} not on this phone yet. ` +
-    "Downloading needs Wi-Fi once — after that the app never touches the internet again.";
+  els.modelBannerText.textContent = t("banner.packsBody", { list: missing.map(languageLabel).join(", ") });
   show(els.modelBanner, true);
-  els.offlineChip.textContent = "Packs missing";
+  els.offlineChip.textContent = t("banner.packsMissing");
   els.offlineChip.classList.remove("chip-ok");
   els.offlineChip.classList.add("chip-warn");
 }
@@ -423,7 +499,7 @@ async function toggleRecording() {
   state.recording = true;
   state.recordStartedAt = Date.now();
   els.recordBtn.classList.add("is-recording");
-  els.recordLabel.textContent = "Listening — tap to stop";
+  els.recordLabel.textContent = t("compose.listening");
   startTimer();
 
   try {
@@ -453,7 +529,7 @@ async function toggleRecording() {
 function stopRecordingUi() {
   state.recording = false;
   els.recordBtn.classList.remove("is-recording");
-  els.recordLabel.textContent = "Hold the phone up and tap to speak";
+  els.recordLabel.textContent = t("compose.tapToSpeak");
   stopTimer();
 }
 
@@ -477,7 +553,7 @@ function stopTimer() {
 function composeFromText() {
   const text = els.typedMessage.value.trim();
   if (!text) {
-    setStatus("Type something first.", true);
+    setStatus(t("compose.typeSomethingFirst"), true);
     return;
   }
   openReview({ text, confidence: null, audioSeconds: null, sttMs: null, fromSpeech: false });
@@ -500,11 +576,11 @@ async function openReview({ text, confidence, audioSeconds, sttMs, fromSpeech })
         els.sourceLang.value = detected;
         els.targetLang.value = sourceLanguage;
         sourceLanguage = detected;
-        toast(`Detected ${languageLabel(detected)} — direction flipped.`);
+        toast(t("detect.flipped", { lang: languageLabel(detected) }));
       } else {
         sourceLanguage = detected;
         els.sourceLang.value = detected;
-        toast(`Detected ${languageLabel(detected)}.`);
+        toast(t("detect.found", { lang: languageLabel(detected) }));
       }
       await persist({ sourceLanguage: els.sourceLang.value, targetLanguage: els.targetLang.value });
     }
@@ -525,21 +601,21 @@ async function openReview({ text, confidence, audioSeconds, sttMs, fromSpeech })
   state.verified = null;
 
   els.editableText.value = text;
-  els.editableHint.textContent = fromSpeech
-    ? "Correct anything the phone got wrong before translating."
-    : "Short, plain sentences translate far more reliably than long ones.";
+  els.editableHint.textContent = fromSpeech ? t("review.hintSpeech") : t("review.hintType");
 
   const uncertain = typeof confidence === "number" && confidence < 0.6;
   show(els.reviewUncertain, uncertain);
   if (uncertain) {
-    els.reviewUncertainText.textContent = ` The recogniser scored this ${Math.round(
-      confidence * 100
-    )}%. Read it carefully before translating.`;
+    els.reviewUncertainText.textContent = t("review.uncertain", {
+      pct: Math.round(confidence * 100),
+    });
   }
   // An empty tag still renders as a stray grey pill, so hide it rather than
   // blanking it. Most on-device recognisers report no confidence at all.
   const hasConfidence = typeof confidence === "number";
-  els.reviewConfidence.textContent = hasConfidence ? `${Math.round(confidence * 100)}% sure` : "";
+  els.reviewConfidence.textContent = hasConfidence
+    ? t("review.sure", { pct: Math.round(confidence * 100) })
+    : "";
   show(els.reviewConfidence, hasConfidence);
 
   show(els.verifyPanes, false);
@@ -553,12 +629,12 @@ async function openReview({ text, confidence, audioSeconds, sttMs, fromSpeech })
 async function runCheck() {
   const text = els.editableText.value.trim();
   if (!text) {
-    els.verifyStatus.textContent = "There is nothing to translate.";
+    els.verifyStatus.textContent = t("review.nothingToTranslate");
     return;
   }
 
   els.verifyBtn.disabled = true;
-  els.verifyStatus.textContent = "Translating on this phone…";
+  els.verifyStatus.textContent = t("review.translating");
 
   try {
     const result = await translateAndVerify({
@@ -569,28 +645,26 @@ async function runCheck() {
 
     state.verified = { ...result, text };
 
-    els.verifyTargetHead.textContent = `They will see (${languageNative(state.pending.targetLanguage)})`;
+    els.verifyTargetHead.textContent = `${t("review.theyWillSee")} (${languageNative(state.pending.targetLanguage)})`;
     els.verifyTargetTag.textContent = languageLabel(state.pending.targetLanguage);
     els.verifyTranslated.textContent = result.translated;
 
     els.verifyBackTag.textContent = languageLabel(state.pending.sourceLanguage);
-    els.verifyBack.textContent =
-      result.backTranslation || "The check could not be run — the reverse pack may be missing.";
+    els.verifyBack.textContent = result.backTranslation || t("review.checkFailed");
 
     const overlap = meaningOverlap(text, result.backTranslation);
     if (overlap !== null && overlap < 0.35) {
       els.verifyStatus.textContent =
-        "The meaning shifted noticeably. Try shorter, simpler wording before showing this.";
+        t("review.meaningShifted");
     } else {
       els.verifyStatus.textContent = engineLabel(result.engine);
     }
 
     show(els.verifyPanes, true);
     show(els.sendRow, true);
-    els.sendHint.textContent =
-      state.pending.passiveMode === "audio"
-        ? "The phone will read it aloud in their language."
-        : "Hold the phone up so they can read it.";
+    els.sendHint.textContent = t(
+      state.pending.passiveMode === "audio" ? "review.willRead" : "review.holdUp"
+    );
   } catch (err) {
     const message =
       err instanceof TranslationError ? err.message : `Translation failed: ${err?.message || err}`;
@@ -674,14 +748,13 @@ async function deliver() {
   els.detectedLang.textContent = p.detectedLanguage ? languageLabel(p.detectedLanguage) : "—";
 
   els.deliveryText.textContent = `${describeExchange(p.activeMode, p.passiveMode)}${
-    wasEdited ? ", after correcting what the phone heard." : "."
+    wasEdited ? t("result.afterCorrecting") : "."
   }`;
   show(els.deliveryBanner, true);
 
   show(els.uncertainBanner, overlap !== null && overlap < 0.35);
   if (overlap !== null && overlap < 0.35) {
-    els.uncertainText.textContent =
-      " The round-trip check came back quite different from what you wrote. It may still be fine, but read the back-translation before relying on it.";
+    els.uncertainText.textContent = ` ${t("result.driftWarning")}`;
   }
 
   resetRatingButtons();
@@ -751,7 +824,7 @@ async function onRate(event) {
     await rateMessage(state.lastMessageId, rating);
     els.ratingButtons.querySelectorAll("button").forEach((b) => b.classList.remove("is-selected"));
     btn.classList.add("is-selected");
-    els.ratingSaved.textContent = "Saved";
+    els.ratingSaved.textContent = t("rating.saved");
     refreshLog();
   } catch (err) {
     toast(err.message);
@@ -811,7 +884,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("[boot] failed", err);
     const status = $("statusMsg");
     if (status) {
-      status.textContent = `The app failed to start: ${err?.message || err}`;
+      status.textContent = t("err.startFailed", { message: err?.message || err });
       status.classList.add("is-error");
     }
   });

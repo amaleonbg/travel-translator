@@ -306,8 +306,11 @@ check("on-device is preferred when the internet is not allowed", /return \["mlki
 check("a web build with no internet allowed falls back to phrases", /return \["phrasebook"\]/.test(translatorSource));
 check("every result carries the engine that produced it", /export function engineLabel/.test(translatorSource));
 
-for (const label of ["Translated on this phone", "Translated over the internet", "From the built-in phrases"]) {
-  check(`engineLabel covers "${label}"`, translatorSource.includes(label));
+// The labels themselves now live in the translation table, so this checks the
+// keys rather than the English text — otherwise translating the app would
+// silently break the check that the labelling exists at all.
+for (const key of ["engine.onDevice", "engine.online", "engine.phrasebook"]) {
+  check(`engineLabel covers ${key}`, translatorSource.includes(`t("${key}")`));
 }
 
 const settingsSource = await readFile(join(root, "src/js/store/settings.js"), "utf8");
@@ -326,7 +329,10 @@ check("index.html has somewhere to name the engine", htmlIds.has("engineNote"));
 const recogniserSource = await readFile(join(root, "src/js/engine/recogniser.js"), "utf8");
 check(
   "the Bulgarian speech note mentions the online fallback",
-  /uses the internet on this phone/.test(recogniserSource)
+  /speech\.needsInternet/.test(recogniserSource) &&
+    /uses an internet connection|needs an internet connection/.test(
+      await readFile(join(root, "src/js/i18n.js"), "utf8")
+    )
 );
 
 // ---------------------------------------------------------------------------
@@ -388,6 +394,100 @@ check(
 check(
   "the cache can be cleared after a voice is installed",
   /export function forgetVoices/.test(speakerSource)
+);
+
+// Every .js file under src/js, so the key-existence check cannot be fooled by
+// a module someone forgot to add to a hand-written list.
+async function listJs(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await listJs(full)));
+    else if (entry.name.endsWith(".js")) out.push(full);
+  }
+  return out;
+}
+
+// --- Interface translation -------------------------------------------------
+// Every key must exist in all four languages. A half-translated interface is
+// worse than an English one: the user cannot tell whether the missing word is
+// a bug or a word they do not know.
+
+const i18nSource = await readFile(join(root, "src/js/i18n.js"), "utf8");
+const { STRINGS, UI_LANGUAGES } = await import(
+  pathToFileURL(join(root, "src/js/i18n.js")).href
+);
+
+check("the interface offers exactly four languages", UI_LANGUAGES.length === 4);
+check(
+  "the four interface languages are the four app languages",
+  UI_LANGUAGES.map((l) => l.code).sort().join(",") === "bg,en,es,pt"
+);
+
+const i18nKeys = Object.keys(STRINGS);
+check("there is a translation table with keys", i18nKeys.length > 50);
+
+const incomplete = i18nKeys.filter((key) =>
+  ["en", "bg", "pt", "es"].some((code) => !String(STRINGS[key]?.[code] || "").trim())
+);
+check(
+  "every interface string exists in all four languages",
+  incomplete.length === 0,
+  incomplete.length ? `missing: ${incomplete.slice(0, 6).join(", ")}` : ""
+);
+
+// A placeholder that survives in one language and is dropped in another prints
+// a literal "{lang}" on screen, which looks like a broken build to the user.
+const placeholderMismatch = i18nKeys.filter((key) => {
+  const set = (code) =>
+    (String(STRINGS[key][code] || "").match(/\{[a-zA-Z]+\}/g) || []).sort().join(",");
+  const en = set("en");
+  return ["bg", "pt", "es"].some((code) => set(code) !== en);
+});
+check(
+  "placeholders like {lang} appear in every language of a string",
+  placeholderMismatch.length === 0,
+  placeholderMismatch.length ? `mismatched: ${placeholderMismatch.slice(0, 6).join(", ")}` : ""
+);
+
+// Every key the interface asks for must exist, or the user sees the raw key.
+const usedKeys = new Set();
+for (const file of await listJs(join(root, "src/js"))) {
+  const src = await readFile(file, "utf8").catch(() => "");
+  for (const m of src.matchAll(/\bt\(\s*"([^"]+)"/g)) usedKeys.add(m[1]);
+}
+for (const m of html.matchAll(/data-i18n(?:-placeholder|-title|-aria)?="([^"]+)"/g)) {
+  usedKeys.add(m[1]);
+}
+const unknown = [...usedKeys].filter((key) => !STRINGS[key]);
+check(
+  "every key used by the interface exists in the translation table",
+  unknown.length === 0,
+  unknown.length ? `unknown: ${unknown.slice(0, 8).join(", ")}` : ""
+);
+
+check(
+  "the header has a language picker the user can reach without reading English",
+  /id="uiLang"/.test(html) && /class="ui-lang"/.test(html),
+  "someone who cannot read English will never find it inside Settings"
+);
+check(
+  "the chosen interface language is remembered between sessions",
+  /uiLanguage/.test(await readFile(join(root, "src/js/store/settings.js"), "utf8"))
+);
+check(
+  "the interface guesses the phone's own language on first run",
+  /export function deviceLanguage/.test(i18nSource) && /deviceLanguage\(\)/.test(mainSource)
+);
+check(
+  "the header shows the app's own icon rather than a stock emoji",
+  /class="brand-mark"[^>]*src="icons\/icon-192\.png"/.test(html),
+  "the emoji globe was the placeholder"
+);
+check(
+  "phrasebook categories are translated rather than fixed English",
+  /key: "cat\./.test(await readFile(join(root, "src/js/data/phrasebook.js"), "utf8")) &&
+    /t\(g\.key\)/.test(await readFile(join(root, "src/js/ui/phrasebook.js"), "utf8"))
 );
 
 // ---------------------------------------------------------------------------

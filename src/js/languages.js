@@ -16,6 +16,8 @@
  * runtime rather than trusting this table. The table is the fallback for when
  * the platform will not tell us (Android 13+ removed getSupportedLanguages).
  */
+import { t } from "./i18n.js";
+
 export const LANGUAGES = [
   {
     code: "en",
@@ -84,8 +86,18 @@ export function resolveLanguage(input) {
   return BY_CODE.get(base) || null;
 }
 
+/**
+ * The language's name in the interface language the user chose.
+ *
+ * Falls back to the English record if a key is somehow absent, so a missing
+ * translation degrades to a readable word rather than a raw "lang.pt" on
+ * screen.
+ */
 export function languageLabel(code) {
-  return BY_CODE.get(code)?.label || code || "—";
+  const record = BY_CODE.get(code);
+  if (!record) return code || "—";
+  const translated = t(`lang.${record.code}`);
+  return translated === `lang.${record.code}` ? record.label : translated;
 }
 
 export function languageNative(code) {

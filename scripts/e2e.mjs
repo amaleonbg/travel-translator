@@ -184,6 +184,41 @@ try {
     (await page.inputValue("#sourceLang")) !== (await page.inputValue("#targetLang"))
   );
 
+  // --- interface language --------------------------------------------------
+  // The point of the picker is that someone who reads no English can use the
+  // app, so the test asserts the *visible* text changes, not that a setting
+  // was written. A stored preference that never reaches the screen is exactly
+  // the bug worth catching here.
+  const beforeSettings = await page.textContent("[data-i18n='tab.settings']");
+
+  await page.selectOption("#uiLang", "bg");
+  await page.waitForTimeout(400);
+
+  const afterSettings = await page.textContent("[data-i18n='tab.settings']");
+  check("switching to Bulgarian changes the interface text", beforeSettings !== afterSettings);
+  check(
+    "the Bulgarian interface really is Cyrillic",
+    /[\u0400-\u04FF]/.test(afterSettings || ""),
+    afterSettings || ""
+  );
+  check("nothing is left as a raw key like tab.settings", !/^[a-z]+\.[a-zA-Z]+$/.test((afterSettings || "").trim()));
+
+  // Parts of the screen are built by JavaScript rather than marked up in the
+  // HTML, and those are the ones that stay English if retranslate() misses.
+  const modeOption = await page.textContent("#activeMode option");
+  check("JavaScript-built dropdowns translate too", /[\u0400-\u04FF]/.test(modeOption || ""), modeOption || "");
+
+  await page.reload();
+  await page.waitForSelector("#uiLang");
+  await page.waitForTimeout(600);
+  check("the chosen language survives a reload", (await page.inputValue("#uiLang")) === "bg");
+
+  await page.selectOption("#uiLang", "en");
+  await page.waitForTimeout(400);
+  check("switching back to English restores it", (await page.textContent("[data-i18n='tab.settings']")) === beforeSettings);
+
+  check("the header shows the app icon, not an emoji", (await page.getAttribute("img.brand-mark", "src"))?.includes("icon-192"));
+
   check("no console errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" ⏎ "));
 
   await page.screenshot({ path: join(root, "docs/screenshot-translate.png"), fullPage: true });

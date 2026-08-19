@@ -24,6 +24,7 @@ import { speechSupport } from "../engine/recogniser.js";
 import { canSpeak } from "../engine/speaker.js";
 import { isNative } from "../engine/platform.js";
 import { clearMessages } from "../store/log.js";
+import { t } from "../i18n.js";
 
 let busy = false;
 
@@ -37,20 +38,20 @@ export async function renderModels() {
     const present = have.has(lang.translate);
     const pivot = lang.translate === PIVOT_LANGUAGE;
     const state = present
-      ? `<span class="model-state is-ready">On this phone</span>`
-      : `<span class="model-state is-missing">Not downloaded</span>`;
+      ? `<span class="model-state is-ready">${escapeHtml(t("settings.onThisPhone"))}</span>`
+      : `<span class="model-state is-missing">${escapeHtml(t("settings.notDownloaded"))}</span>`;
     const action = present
       ? pivot
-        ? `<span class="hint">Required</span>`
-        : `<button class="btn-secondary btn-danger" type="button" data-delete="${lang.translate}">Remove</button>`
-      : `<button class="btn-secondary" type="button" data-download="${lang.translate}">Download</button>`;
+        ? `<span class="hint">${escapeHtml(t("settings.required"))}</span>`
+        : `<button class="btn-secondary btn-danger" type="button" data-delete="${lang.translate}">${escapeHtml(t("settings.remove"))}</button>`
+      : `<button class="btn-secondary" type="button" data-download="${lang.translate}">${escapeHtml(t("settings.download"))}</button>`;
 
     return `
       <div class="model-row">
         <span class="model-name">
-          ${lang.flag} ${escapeHtml(lang.label)}
-          <span class="model-sub">${escapeHtml(lang.native)} · about ${APPROX_MODEL_MB}&nbsp;MB${
-            pivot ? " · used by every other language" : ""
+          ${lang.flag} ${escapeHtml(languageLabel(lang.code))}
+          <span class="model-sub">${escapeHtml(lang.native)} · ${escapeHtml(t("settings.aboutMb"))}${
+            pivot ? ` · ${escapeHtml(t("settings.usedByOthers"))}` : ""
           }</span>
         </span>
         ${state}
@@ -62,14 +63,14 @@ export async function renderModels() {
   const btn = $("downloadAllBtn");
   if (btn) {
     btn.disabled = busy || missing.length === 0;
-    btn.textContent = missing.length === 0 ? "All packs are on this phone" : `Download ${missing.length} missing pack${missing.length === 1 ? "" : "s"}`;
+    btn.textContent =
+      missing.length === 0 ? t("settings.allPacksPresent") : t("settings.downloadMissing");
   }
 
   if (!isNative()) {
     const status = $("modelStatus");
     if (status) {
-      status.textContent =
-        "Browser preview — packs only exist on a phone. Here the built-in phrasebook stands in for the engine.";
+      status.textContent = t("settings.previewNote");
     }
   }
 }
@@ -84,21 +85,21 @@ export async function renderCapabilities() {
 
     const speechText =
       speechState === "yes"
-        ? "Speaking works offline"
+        ? t("cap.speechOffline")
         : speechState === "pack"
-        ? "Speaking needs the offline pack installed"
+        ? t("cap.speechNeedsPack")
         : speechState === "no"
-        ? "Speaking not available offline on this phone — type instead"
-        : "Speaking: not reported by this device, try it";
+        ? t("cap.speechOnline")
+        : t("cap.speechUnknown");
 
     rows.push(`
       <div class="capability-row">
         <span class="capability-name">
-          ${lang.flag} ${escapeHtml(lang.label)}
+          ${lang.flag} ${escapeHtml(languageLabel(lang.code))}
           <span class="capability-sub">
-            Typing and translation: always offline ·
+            ${escapeHtml(t("cap.typingAlways"))} ·
             ${escapeHtml(speechText)} ·
-            ${voice ? "Reading aloud works" : "No voice installed for reading aloud"}
+            ${escapeHtml(voice ? t("cap.voiceYes") : t("cap.voiceNo"))}
           </span>
         </span>
       </div>`);
@@ -135,19 +136,15 @@ export function wireSettings({ onSettingChange, settings }) {
       if (dl) {
         const code = dl.dataset.download;
         dl.disabled = true;
-        if (status) status.textContent = `Downloading ${languageLabel(code)}… this can take a minute.`;
+        if (status) status.textContent = t("models.downloading", { lang: languageLabel(code) });
         await downloadModel(code);
-        toast(`${languageLabel(code)} is now available offline.`);
+        toast(t("models.ready", { lang: languageLabel(code) }));
       } else {
         const code = rm.dataset.delete;
-        const ok = window.confirm(
-          `Remove the ${languageLabel(code)} pack? Translation into ${languageLabel(
-            code
-          )} will stop working until you download it again.`
-        );
+        const ok = window.confirm(t("models.confirmRemove", { lang: languageLabel(code) }));
         if (!ok) return;
         await deleteModel(code);
-        toast(`${languageLabel(code)} pack removed.`);
+        toast(t("models.removed", { lang: languageLabel(code) }));
       }
       if (status) status.textContent = "";
     } catch (err) {
@@ -165,9 +162,7 @@ export function wireSettings({ onSettingChange, settings }) {
     const status = $("modelStatus");
     const net = await connection();
     if (net.connected && !net.wifi && net.type !== "unknown") {
-      const ok = window.confirm(
-        "You are not on Wi-Fi. Each pack is around 30 MB. Download over mobile data anyway?"
-      );
+      const ok = window.confirm(t("models.notWifi"));
       if (!ok) return;
     }
 
@@ -176,16 +171,16 @@ export function wireSettings({ onSettingChange, settings }) {
       const results = await downloadAllMissing(({ code, index, total, state }) => {
         if (!status) return;
         if (state === "downloading") {
-          status.textContent = `Downloading ${languageLabel(code)} (${index + 1} of ${total})…`;
+          status.textContent = `${t("models.downloading", { lang: languageLabel(code) })} (${
+            index + 1
+          }/${total})`;
         }
       });
       const failed = results.filter((r) => !r.ok);
       if (status) {
-        status.textContent = failed.length
-          ? `${failed.length} pack${failed.length === 1 ? "" : "s"} failed. ${failed[0].error}`
-          : "";
+        status.textContent = failed.length ? `${t("models.someFailed")} ${failed[0].error}` : "";
       }
-      toast(failed.length ? "Some packs did not download." : "All language packs are ready.");
+      toast(failed.length ? t("models.someFailed") : t("models.allReady"));
     } finally {
       busy = false;
       await renderModels();
@@ -194,14 +189,12 @@ export function wireSettings({ onSettingChange, settings }) {
   });
 
   $("clearLogBtn")?.addEventListener("click", async () => {
-    const ok = window.confirm(
-      "Delete every message stored on this phone? This cannot be undone."
-    );
+    const ok = window.confirm(t("settings.confirmDeleteAll"));
     if (!ok) return;
     await clearMessages();
     const status = $("clearLogStatus");
-    if (status) status.textContent = "All messages deleted.";
-    toast("Message log cleared.");
+    if (status) status.textContent = t("settings.logCleared");
+    toast(t("settings.logCleared"));
     document.dispatchEvent(new CustomEvent("log:changed"));
   });
 }

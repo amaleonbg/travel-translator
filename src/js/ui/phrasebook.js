@@ -10,6 +10,7 @@
 import { $, escapeHtml, toast } from "../util.js";
 import { PHRASEBOOK, searchPhrases } from "../data/phrasebook.js";
 import { languageLabel } from "../languages.js";
+import { t } from "../i18n.js";
 import { speak, canSpeak } from "../engine/speaker.js";
 
 let onUsePhrase = () => {};
@@ -27,7 +28,7 @@ export function initPhrasebook({ onUse, pair }) {
       const { target } = getPair();
       const text = speakBtn.dataset.speak;
       if (!(await canSpeak(target))) {
-        toast(`This phone has no ${languageLabel(target)} voice installed.`);
+        toast(t("voice.none", { lang: languageLabel(target) }), 6000);
         return;
       }
       try {
@@ -54,11 +55,11 @@ export function renderPhrases(query = "") {
   const trimmed = String(query || "").trim();
 
   const groups = trimmed
-    ? [{ category: "Matches", phrases: searchPhrases(trimmed) }]
-    : PHRASEBOOK;
+    ? [{ title: t("phrases.matches"), phrases: searchPhrases(trimmed) }]
+    : PHRASEBOOK.map((g) => ({ title: t(g.key), phrases: g.phrases }));
 
   if (groups.every((g) => g.phrases.length === 0)) {
-    list.innerHTML = `<p class="pane-note">Nothing matched “${escapeHtml(trimmed)}”.</p>`;
+    list.innerHTML = `<p class="pane-note">${escapeHtml(t("phrases.noMatch", { q: trimmed }))}</p>`;
     return;
   }
 
@@ -79,13 +80,13 @@ export function renderPhrases(query = "") {
                 class="phrase-speak"
                 type="button"
                 data-speak="${escapeHtml(to)}"
-                aria-label="Read aloud in ${escapeHtml(languageLabel(target))}"
-                title="Read aloud in ${escapeHtml(languageLabel(target))}"
+                aria-label="${escapeHtml(t("phrases.readAloud", { lang: languageLabel(target) }))}"
+                title="${escapeHtml(t("phrases.readAloud", { lang: languageLabel(target) }))}"
               >🔊</button>
             </div>`;
         })
         .join("");
-      return `<div><p class="phrase-group-title">${escapeHtml(group.category)}</p>${items}</div>`;
+      return `<div><p class="phrase-group-title">${escapeHtml(group.title)}</p>${items}</div>`;
     })
     .join("");
 }

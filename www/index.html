@@ -28,16 +28,26 @@
   <body>
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">🌍</span>
+        <!-- The app's own icon, the same one that lands on the home screen, so
+             the header and the launcher agree with each other. -->
+        <img class="brand-mark" src="icons/icon-192.png" alt="" width="34" height="34" />
         <div>
-          <h1>Travel Translator</h1>
+          <h1 data-i18n="app.name">Travel Translator</h1>
           <p class="brand-sub">English · Български · Português · Español</p>
         </div>
       </div>
       <div class="status-chips">
-        <button id="installBtn" class="chip chip-action chip-hidden" type="button">Install</button>
-        <span id="offlineChip" class="chip chip-ok" title="This app does not need the internet">Works offline</span>
-        <span id="envChip" class="chip chip-neutral">Starting…</span>
+        <!-- Interface language. In the header rather than buried in Settings,
+             because someone who cannot read English will not find "Settings". -->
+        <select
+          id="uiLang"
+          class="ui-lang"
+          data-i18n-aria="settings.appLanguage"
+          data-i18n-title="settings.appLanguage"
+        ></select>
+        <button id="installBtn" class="chip chip-action chip-hidden" type="button" data-i18n="chip.install">Install</button>
+        <span id="offlineChip" class="chip chip-ok">Works offline</span>
+        <span id="envChip" class="chip chip-neutral">…</span>
       </div>
     </header>
 
@@ -47,20 +57,17 @@
       <!-- ============================================================== -->
       <div id="modelBanner" class="banner banner-warn banner-standalone hidden">
         <div>
-          <strong>Download the language packs before you travel.</strong>
+          <strong data-i18n="banner.packsTitle">Download the language packs before you travel.</strong>
           <span id="modelBannerText"></span>
         </div>
         <div class="banner-actions">
-          <button id="modelBannerBtn" class="btn-primary" type="button">Download now</button>
-          <button id="modelBannerDismiss" class="btn-ghost" type="button">Later</button>
+          <button id="modelBannerBtn" class="btn-primary" type="button" data-i18n="banner.downloadNow">Download now</button>
+          <button id="modelBannerDismiss" class="btn-ghost" type="button" data-i18n="banner.later">Later</button>
         </div>
       </div>
 
       <div id="iosInstallTip" class="install-tip hidden">
-        <span>
-          <strong>Add this to your Home Screen.</strong> Tap Share, then
-          <em>Add to Home Screen</em> — it then opens full-screen, like an app.
-        </span>
+        <span data-i18n="banner.iosInstall">Add this to your Home Screen. Tap Share, then Add to Home Screen.</span>
         <button id="dismissTipBtn" class="tip-close" type="button" aria-label="Dismiss">×</button>
       </div>
 
@@ -69,13 +76,13 @@
       <!-- ============================================================== -->
       <section class="screen" id="screen-translate">
         <div class="card">
-          <h2>Compose a message</h2>
+          <h2 data-i18n="compose.title">Compose a message</h2>
 
           <!-- Who is doing what. No roles — just: are you speaking or typing,
                and is the other person reading or listening. -->
           <div class="lang-row">
             <div class="lang-field">
-              <label for="activeMode">Active user <small>(sends)</small></label>
+              <label for="activeMode"><span data-i18n="compose.activeUser">Active user</span> <small data-i18n="compose.sends">(sends)</small></label>
               <select id="activeMode" aria-label="How the active user sends"></select>
               <select id="sourceLang" aria-label="Language the active user is using"></select>
             </div>
@@ -84,14 +91,14 @@
               id="swapBtn"
               class="swap-btn"
               type="button"
-              title="Swap both directions — languages and how each person is using the app"
-              aria-label="Swap direction"
+              data-i18n-title="compose.swap"
+              data-i18n-aria="compose.swap"
             >
               ⇄
             </button>
 
             <div class="lang-field">
-              <label for="passiveMode">Passive user <small>(receives)</small></label>
+              <label for="passiveMode"><span data-i18n="compose.passiveUser">Passive user</span> <small data-i18n="compose.receives">(receives)</small></label>
               <select id="passiveMode" aria-label="How the passive user receives"></select>
               <select id="targetLang" aria-label="Language the passive user needs"></select>
             </div>
@@ -100,11 +107,8 @@
           <label class="checkbox-row">
             <input type="checkbox" id="autoDetect" />
             <span>
-              Work out the language from what is written
-              <small
-                >Useful when someone else has typed into your phone and you are not sure what they
-                used. Checked against the four languages only.</small
-              >
+              <span data-i18n="compose.autoDetect">Work out the language from what is written</span>
+              <small data-i18n="compose.autoDetectHint">Useful when someone else has typed into your phone.</small>
             </span>
           </label>
 
@@ -114,7 +118,7 @@
           <div id="audioInput" class="recorder">
             <button id="recordBtn" class="record-btn" type="button">
               <span class="record-icon" aria-hidden="true"></span>
-              <span id="recordLabel">Hold the phone up and tap to speak</span>
+              <span id="recordLabel" data-i18n="compose.tapToSpeak">Hold the phone up and tap to speak</span>
             </button>
 
             <div class="recorder-meta">
@@ -125,25 +129,25 @@
 
           <!-- Text input -->
           <div id="textInput" class="text-input hidden">
-            <label for="typedMessage">Type the message</label>
+            <label for="typedMessage" data-i18n="compose.typeLabel">Type the message</label>
             <textarea
               id="typedMessage"
               rows="3"
               maxlength="2000"
-              placeholder="Type what you want to say, in your own language."
+              data-i18n-placeholder="compose.typePlaceholder" placeholder="Type what you want to say, in your own language."
             ></textarea>
             <div class="text-input-actions">
-              <span id="typedCount" class="hint">0 characters</span>
-              <button id="composeBtn" class="btn-primary" type="button">Continue</button>
+              <span id="typedCount" class="hint"></span>
+              <button id="composeBtn" class="btn-primary" type="button" data-i18n="compose.continue">Continue</button>
             </div>
           </div>
 
           <div class="test-label-row" id="labelRow">
-            <label for="clientLabel">Label <small>(optional — helps when reviewing later)</small></label>
+            <label for="clientLabel"><span data-i18n="compose.label">Label</span> <small data-i18n="compose.labelHint">(optional)</small></label>
             <input
               id="clientLabel"
               type="text"
-              placeholder="e.g. pharmacy in Nessebar, noisy street"
+              data-i18n-placeholder="compose.labelPlaceholder" placeholder="e.g. pharmacy, noisy street"
               maxlength="120"
             />
           </div>
@@ -154,33 +158,33 @@
         <!-- Review before sending -->
         <section id="reviewCard" class="card hidden">
           <div class="card-head">
-            <h2>Check before sending</h2>
+            <h2 data-i18n="review.title">Check before sending</h2>
             <span id="reviewConfidence" class="tag"></span>
           </div>
 
           <div id="reviewUncertain" class="banner banner-warn hidden">
-            <strong>The phone was unsure what it heard.</strong>
+            <strong data-i18n="review.unsure">The phone was unsure what it heard.</strong>
             <span id="reviewUncertainText"></span>
           </div>
 
           <div class="review-field">
             <label for="editableText">
-              Your message
-              <small id="editableHint">Correct anything the phone got wrong before translating.</small>
+              <span data-i18n="review.yourMessage">Your message</span>
+              <small id="editableHint" data-i18n="review.correctHint">Correct anything the phone got wrong before translating.</small>
             </label>
             <textarea id="editableText" rows="3" maxlength="2000"></textarea>
           </div>
 
           <div class="review-actions">
-            <button id="verifyBtn" class="btn-primary" type="button">Translate &amp; check</button>
-            <button id="cancelReviewBtn" class="btn-secondary" type="button">Discard</button>
+            <button id="verifyBtn" class="btn-primary" type="button" data-i18n="review.translateCheck">Translate &amp; check</button>
+            <button id="cancelReviewBtn" class="btn-secondary" type="button" data-i18n="review.discard">Discard</button>
             <span id="verifyStatus" class="hint"></span>
           </div>
 
           <div id="verifyPanes" class="result-grid hidden">
             <div class="result-pane result-pane-accent">
               <div class="pane-head">
-                <h3 id="verifyTargetHead">They will see</h3>
+                <h3 id="verifyTargetHead" data-i18n="review.theyWillSee">They will see</h3>
                 <span id="verifyTargetTag" class="tag"></span>
               </div>
               <p id="verifyTranslated" class="result-text"></p>
@@ -188,20 +192,16 @@
 
             <div class="result-pane">
               <div class="pane-head">
-                <h3>Translated back, to check the meaning</h3>
+                <h3 data-i18n="review.backTranslated">Translated back, to check the meaning</h3>
                 <span id="verifyBackTag" class="tag"></span>
               </div>
               <p id="verifyBack" class="result-text"></p>
-              <p class="pane-note">
-                This is the translation put back into your own language. If it still says what you
-                meant, the message is safe to show. If it drifts, reword the text above — short,
-                plain sentences translate far better than long ones.
-              </p>
+              <p class="pane-note" data-i18n="review.backNote">This is the translation put back into your own language.</p>
             </div>
           </div>
 
           <div id="sendRow" class="review-actions hidden">
-            <button id="sendBtn" class="btn-primary" type="button">Show it to them</button>
+            <button id="sendBtn" class="btn-primary" type="button" data-i18n="review.show">Show it to them</button>
             <span class="hint" id="sendHint"></span>
           </div>
         </section>
@@ -209,42 +209,42 @@
         <!-- Result -->
         <section id="resultCard" class="card hidden">
           <div class="card-head">
-            <h2>Result</h2>
-            <button id="bigTextBtn" class="btn-secondary" type="button">Show full screen</button>
+            <h2 data-i18n="result.title">Result</h2>
+            <button id="bigTextBtn" class="btn-secondary" type="button" data-i18n="result.showFullScreen">Show full screen</button>
           </div>
 
           <div id="deliveryBanner" class="banner banner-ok hidden">
-            <strong>Ready.</strong> <span id="deliveryText"></span>
+            <strong data-i18n="result.ready">Ready.</strong> <span id="deliveryText"></span>
           </div>
 
           <div id="audioOut" class="audio-out hidden">
-            <button id="replayBtn" class="btn-secondary" type="button">🔊 Read it aloud again</button>
+            <button id="replayBtn" class="btn-secondary" type="button" data-i18n="result.readAloudAgain">🔊 Read it aloud again</button>
             <span id="ttsMeta" class="hint"></span>
           </div>
 
           <div id="uncertainBanner" class="banner banner-warn hidden">
-            <strong>Uncertain transcription.</strong>
+            <strong data-i18n="result.uncertain">Uncertain transcription.</strong>
             <span id="uncertainText"></span>
           </div>
 
           <div class="result-grid">
             <div class="result-pane">
               <div class="pane-head">
-                <h3>Sent</h3>
+                <h3 data-i18n="result.sent">Sent</h3>
                 <span id="originalLangTag" class="tag"></span>
               </div>
               <p id="originalText" class="result-text"></p>
-              <button class="copy-btn" data-copy="originalText" type="button">Copy</button>
+              <button class="copy-btn" data-copy="originalText" type="button" data-i18n="result.copy">Copy</button>
             </div>
 
             <div class="result-pane result-pane-accent">
               <div class="pane-head">
-                <h3>Received</h3>
+                <h3 data-i18n="result.received">Received</h3>
                 <span id="translatedLangTag" class="tag"></span>
               </div>
               <p id="translatedText" class="result-text"></p>
               <p id="engineNote" class="pane-note"></p>
-              <button class="copy-btn" data-copy="translatedText" type="button">Copy</button>
+              <button class="copy-btn" data-copy="translatedText" type="button" data-i18n="result.copy">Copy</button>
             </div>
           </div>
 
@@ -253,7 +253,7 @@
               class="metric"
               title="How much of your original wording survived being translated and translated back. High is reassuring; low often just means the language reshaped the sentence."
             >
-              <span class="metric-label">Meaning match</span>
+              <span class="metric-label" data-i18n="metric.meaningMatch">Meaning match</span>
               <span id="meaningValue" class="metric-value">—</span>
               <div class="confidence-track"><div id="meaningBar" class="confidence-fill"></div></div>
             </div>
@@ -261,34 +261,34 @@
               class="metric"
               title="Only some recognisers report how sure they were. On-device recognition usually does not, and this app will not invent a number."
             >
-              <span class="metric-label">Heard clearly</span>
+              <span class="metric-label" data-i18n="metric.heardClearly">Heard clearly</span>
               <span id="confidenceValue" class="metric-value">—</span>
               <div class="confidence-track"><div id="confidenceBar" class="confidence-fill"></div></div>
             </div>
             <div class="metric">
-              <span class="metric-label">Speech</span>
+              <span class="metric-label" data-i18n="metric.speech">Speech</span>
               <span id="sttMs" class="metric-value">—</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Translation</span>
+              <span class="metric-label" data-i18n="metric.translation">Translation</span>
               <span id="translateMs" class="metric-value">—</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Total</span>
+              <span class="metric-label" data-i18n="metric.total">Total</span>
               <span id="totalMs" class="metric-value">—</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Spoken for</span>
+              <span class="metric-label" data-i18n="metric.spokenFor">Spoken for</span>
               <span id="audioSeconds" class="metric-value">—</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Detected</span>
+              <span class="metric-label" data-i18n="metric.detected">Detected</span>
               <span id="detectedLang" class="metric-value">—</span>
             </div>
           </div>
 
           <div class="rating-row">
-            <span class="rating-label">Was this actually correct?</span>
+            <span class="rating-label" data-i18n="rating.question">Was this actually correct?</span>
             <div id="ratingButtons" class="rating-buttons">
               <button type="button" data-rating="1" title="Wrong / unusable">1</button>
               <button type="button" data-rating="2" title="Major errors">2</button>
@@ -300,7 +300,7 @@
           </div>
 
           <div class="review-actions">
-            <button id="newMessageBtn" class="btn-primary" type="button">New message</button>
+            <button id="newMessageBtn" class="btn-primary" type="button" data-i18n="result.newMessage">New message</button>
           </div>
         </section>
       </section>
@@ -311,19 +311,15 @@
       <section class="screen hidden" id="screen-phrasebook">
         <div class="card">
           <div class="card-head">
-            <h2>Phrasebook</h2>
+            <h2 data-i18n="phrases.title">Phrasebook</h2>
             <span class="hint" id="phrasebookPair"></span>
           </div>
-          <p class="pane-note">
-            Ready-made sentences that need no translation engine at all — they are built into the
-            app. Tap one to load it into the message box, or tap the speaker to have the phone
-            say it.
-          </p>
+          <p class="pane-note" data-i18n="phrases.note">Ready-made sentences.</p>
           <input
             id="phraseSearch"
             class="search-input"
             type="search"
-            placeholder="Search — try 'pharmacy', 'ticket', 'allergic'"
+            data-i18n-placeholder="phrases.searchPlaceholder" placeholder="Search"
             aria-label="Search phrases"
           />
           <div id="phraseList" class="phrase-list"></div>
@@ -336,24 +332,17 @@
       <section class="screen hidden" id="screen-log">
         <div class="card">
           <div class="card-head">
-            <h2>Message Log</h2>
+            <h2 data-i18n="log.title">Message Log</h2>
             <div class="card-actions">
               <span id="selectionCount" class="selection-count hidden"></span>
-              <button id="deleteSelectedBtn" class="btn-secondary btn-danger hidden" type="button">
-                Delete
-              </button>
-              <button id="exportSelectedBtn" class="btn-secondary hidden" type="button">
-                Export selected
-              </button>
-              <button id="refreshBtn" class="btn-secondary" type="button">Refresh</button>
-              <button id="exportBtn" class="btn-secondary" type="button">Export CSV</button>
+              <button id="deleteSelectedBtn" class="btn-secondary btn-danger hidden" type="button" data-i18n="log.delete">Delete</button>
+              <button id="exportSelectedBtn" class="btn-secondary hidden" type="button" data-i18n="log.exportSelected">Export selected</button>
+              <button id="refreshBtn" class="btn-secondary" type="button" data-i18n="log.refresh">Refresh</button>
+              <button id="exportBtn" class="btn-secondary" type="button" data-i18n="log.exportCsv">Export CSV</button>
             </div>
           </div>
 
-          <p class="pane-note">
-            Every message stays on this phone. Nothing is uploaded anywhere, and deleting a row
-            here deletes it for good.
-          </p>
+          <p class="pane-note" data-i18n="log.note">Every message stays on this phone.</p>
 
           <div class="table-wrap">
             <table id="runsTable">
@@ -381,18 +370,18 @@
                     </div>
                   </th>
                   <th>#</th>
-                  <th>When</th>
-                  <th>Who</th>
-                  <th>Lang</th>
-                  <th>Sent</th>
-                  <th>Received</th>
-                  <th>Rating</th>
-                  <th>Status</th>
+                  <th data-i18n="log.when">When</th>
+                  <th data-i18n="log.who">Who</th>
+                  <th data-i18n="log.lang">Lang</th>
+                  <th data-i18n="result.sent">Sent</th>
+                  <th data-i18n="result.received">Received</th>
+                  <th data-i18n="log.rating">Rating</th>
+                  <th data-i18n="log.status">Status</th>
                 </tr>
               </thead>
               <tbody id="runsBody">
                 <tr>
-                  <td colspan="9" class="empty">No messages yet.</td>
+                  <td colspan="9" class="empty" data-i18n="log.empty">No messages yet.</td>
                 </tr>
               </tbody>
             </table>
@@ -405,25 +394,21 @@
       <!-- ============================================================== -->
       <section class="screen hidden" id="screen-settings">
         <div class="card">
-          <h2>Offline language packs</h2>
-          <p class="pane-note">
-            These are what make the app work with no signal. Download them on Wi-Fi before you
-            travel — each is around 30&nbsp;MB, downloaded once and kept. English cannot be removed
-            because every translation passes through it internally.
-          </p>
+          <h2 data-i18n="settings.packsTitle">Offline language packs</h2>
+          <p class="pane-note" data-i18n="settings.packsNote">Offline language packs.</p>
           <div id="modelList" class="model-list"></div>
           <div class="review-actions">
-            <button id="downloadAllBtn" class="btn-primary" type="button">Download everything missing</button>
+            <button id="downloadAllBtn" class="btn-primary" type="button" data-i18n="settings.downloadMissing">Download everything missing</button>
             <span id="modelStatus" class="hint"></span>
           </div>
         </div>
 
         <div class="card">
-          <h2>Using the internet</h2>
+          <h2 data-i18n="settings.internetTitle">Using the internet</h2>
           <label class="checkbox-row">
             <input type="checkbox" id="useInternetToggle" />
             <span>
-              Use the internet when it is available
+              <span data-i18n="settings.useInternet">Use the internet when it is available</span>
               <small id="useInternetHint"></small>
             </span>
           </label>
@@ -431,46 +416,40 @@
         </div>
 
         <div class="card">
-          <h2>How the phone behaves</h2>
+          <h2 data-i18n="settings.behaviourTitle">How the phone behaves</h2>
           <label class="checkbox-row">
             <input type="checkbox" id="autoSpeakToggle" />
             <span>
-              Read the translation aloud automatically
-              <small>When the passive user is set to Audio, speak the result as soon as it is ready.</small>
+              <span data-i18n="settings.autoSpeak">Read the translation aloud automatically</span>
+              <small data-i18n="settings.autoSpeakHint">Speak the result as soon as it is ready.</small>
             </span>
           </label>
           <label class="checkbox-row">
             <input type="checkbox" id="bigTextToggle" />
             <span>
-              Always open the result full screen
-              <small>Large text on a plain background — easier to hold up for someone else to read.</small>
+              <span data-i18n="settings.bigText">Always open the result full screen</span>
+              <small data-i18n="settings.bigTextHint">Large text on a plain background.</small>
             </span>
           </label>
           <label class="checkbox-row">
             <input type="checkbox" id="testToolsToggle" />
             <span>
-              Show review tools
-              <small>The 1–5 accuracy rating, the label box and CSV export. Leave on while testing.</small>
+              <span data-i18n="settings.testTools">Show review tools</span>
+              <small data-i18n="settings.testToolsHint">The 1–5 rating, the label box and CSV export.</small>
             </span>
           </label>
         </div>
 
         <div class="card">
-          <h2>What works without internet</h2>
+          <h2 data-i18n="settings.capabilityTitle">What works without internet</h2>
           <div id="capabilityList" class="capability-list"></div>
         </div>
 
         <div class="card">
-          <h2>Privacy</h2>
-          <p class="pane-note">
-            This app has no server and no account. Translation happens on the phone using the
-            downloaded packs. Messages are stored only on this device, and are removed when the app
-            is uninstalled. The only time it uses the internet is downloading a language pack.
-          </p>
+          <h2 data-i18n="settings.privacyTitle">Privacy</h2>
+          <p class="pane-note" data-i18n="settings.privacyNote">No server, no account.</p>
           <div class="review-actions">
-            <button id="clearLogBtn" class="btn-secondary btn-danger" type="button">
-              Delete every message
-            </button>
+            <button id="clearLogBtn" class="btn-secondary btn-danger" type="button" data-i18n="settings.deleteAll">Delete every message</button>
             <span id="clearLogStatus" class="hint"></span>
           </div>
         </div>
@@ -483,28 +462,28 @@
       <div class="big-inner">
         <p id="bigTextLang" class="big-lang"></p>
         <p id="bigTextBody" class="big-body"></p>
-        <button id="bigSpeakBtn" class="btn-primary big-speak" type="button">🔊 Read aloud</button>
+        <button id="bigSpeakBtn" class="btn-primary big-speak" type="button" data-i18n="result.readAloud">🔊 Read aloud</button>
       </div>
     </div>
 
     <nav class="tabbar" role="tablist">
       <button class="tab is-active" data-screen="translate" role="tab" type="button">
-        <span aria-hidden="true">💬</span><span>Translate</span>
+        <span aria-hidden="true">💬</span><span data-i18n="tab.translate">Translate</span>
       </button>
       <button class="tab" data-screen="phrasebook" role="tab" type="button">
-        <span aria-hidden="true">📖</span><span>Phrases</span>
+        <span aria-hidden="true">📖</span><span data-i18n="tab.phrases">Phrases</span>
       </button>
       <button class="tab" data-screen="log" role="tab" type="button">
-        <span aria-hidden="true">🗒️</span><span>Log</span>
+        <span aria-hidden="true">🗒️</span><span data-i18n="tab.log">Log</span>
       </button>
       <button class="tab" data-screen="settings" role="tab" type="button">
-        <span aria-hidden="true">⚙️</span><span>Settings</span>
+        <span aria-hidden="true">⚙️</span><span data-i18n="tab.settings">Settings</span>
       </button>
     </nav>
 
     <div id="selectMenu" class="select-menu hidden" role="menu">
-      <button type="button" role="menuitem" data-select="all">All</button>
-      <button type="button" role="menuitem" data-select="none">None</button>
+      <button type="button" role="menuitem" data-select="all" data-i18n="log.selectAll">All</button>
+      <button type="button" role="menuitem" data-select="none" data-i18n="log.selectNone">None</button>
     </div>
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>

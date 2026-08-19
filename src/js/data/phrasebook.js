@@ -13,6 +13,7 @@
  */
 export const PHRASEBOOK = [
   {
+    key: "cat.greetings",
     category: "Greetings & basics",
     phrases: [
       { en: "Hello", bg: "Здравейте", pt: "Olá", es: "Hola" },
@@ -30,6 +31,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.gettingAround",
     category: "Getting around",
     phrases: [
       { en: "Where is the bus station?", bg: "Къде е автогарата?", pt: "Onde fica a estação de autocarros?", es: "¿Dónde está la estación de autobuses?" },
@@ -43,6 +45,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.staying",
     category: "Where you are staying",
     phrases: [
       { en: "I have a reservation", bg: "Имам резервация", pt: "Tenho uma reserva", es: "Tengo una reserva" },
@@ -55,6 +58,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.eating",
     category: "Eating out",
     phrases: [
       { en: "A table for two, please", bg: "Маса за двама, моля", pt: "Uma mesa para dois, por favor", es: "Una mesa para dos, por favor" },
@@ -67,6 +71,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.shopping",
     category: "Shopping & money",
     phrases: [
       { en: "How much does this cost?", bg: "Колко струва това?", pt: "Quanto custa isto?", es: "¿Cuánto cuesta esto?" },
@@ -78,6 +83,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.health",
     category: "Health & emergency",
     phrases: [
       { en: "I need a doctor", bg: "Имам нужда от лекар", pt: "Preciso de um médico", es: "Necesito un médico" },
@@ -91,6 +97,7 @@ export const PHRASEBOOK = [
     ],
   },
   {
+    key: "cat.problems",
     category: "When something goes wrong",
     phrases: [
       { en: "I am lost", bg: "Изгубих се", pt: "Estou perdido", es: "Estoy perdido" },

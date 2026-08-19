@@ -11,6 +11,7 @@ import { $, escapeHtml, formatWhen, show, toast, downloadFile } from "../util.js
 import { listMessages, deleteMessages, exportCsv } from "../store/log.js";
 import { describeExchange } from "../modes.js";
 import { languageLabel } from "../languages.js";
+import { t } from "../i18n.js";
 
 const selected = new Set();
 let rows = [];
@@ -29,8 +30,8 @@ function statusPill(row) {
       row.errorCode || "error"
     )}</span>`;
   }
-  if (row.preview) return `<span class="status-pill">preview</span>`;
-  return `<span class="status-pill">sent</span>`;
+  if (row.preview) return `<span class="status-pill">${t("log.statusPreview")}</span>`;
+  return `<span class="status-pill">${t("log.statusSent")}</span>`;
 }
 
 function render() {
@@ -38,7 +39,7 @@ function render() {
   if (!body) return;
 
   if (rows.length === 0) {
-    body.innerHTML = `<tr><td colspan="9" class="empty">No messages yet.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" class="empty">${t("log.empty")}</td></tr>`;
     updateSelectionUi();
     return;
   }
@@ -58,7 +59,7 @@ function render() {
           <td class="select-col">
             <input type="checkbox" class="row-check row-select" data-id="${row.id}" ${
               selected.has(row.id) ? "checked" : ""
-            } aria-label="Select message ${row.id}" />
+            } aria-label="${escapeHtml(t("log.selectRow", { id: row.id }))}" />
           </td>
           <td>${row.id}</td>
           <td>${escapeHtml(formatWhen(row.createdAt))}</td>
@@ -79,7 +80,7 @@ function updateSelectionUi() {
   const count = selected.size;
   const countEl = $("selectionCount");
   if (countEl) {
-    countEl.textContent = count === 1 ? "1 selected" : `${count} selected`;
+    countEl.textContent = t("log.selected", { n: count });
     show(countEl, count > 0);
   }
   show($("deleteSelectedBtn"), count > 0);
@@ -131,20 +132,18 @@ export function wireLogTable() {
   $("deleteSelectedBtn")?.addEventListener("click", async () => {
     const ids = [...selected];
     if (ids.length === 0) return;
-    const ok = window.confirm(
-      `Delete ${ids.length} message${ids.length === 1 ? "" : "s"}? This cannot be undone.`
-    );
+    const ok = window.confirm(t("log.confirmDelete", { n: ids.length }));
     if (!ok) return;
     const deleted = await deleteMessages(ids);
     selected.clear();
     await refreshLog();
-    toast(`Deleted ${deleted} message${deleted === 1 ? "" : "s"}.`);
+    toast(t("log.deleted", { n: deleted }));
   });
 
   $("exportBtn")?.addEventListener("click", async () => {
     const csv = await exportCsv(null);
     downloadFile(`translator-log-${new Date().toISOString().slice(0, 10)}.csv`, csv);
-    toast("CSV exported.");
+    toast(t("log.exported"));
   });
 
   $("exportSelectedBtn")?.addEventListener("click", async () => {
@@ -155,6 +154,6 @@ export function wireLogTable() {
       `translator-log-${new Date().toISOString().slice(0, 10)}-selection-${ids.length}.csv`,
       csv
     );
-    toast(`Exported ${ids.length} message${ids.length === 1 ? "" : "s"}.`);
+    toast(t("log.exported"));
   });
 }
