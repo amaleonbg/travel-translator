@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — Travel Translator</title>
+    <meta name="description" content="Travel Translator collects nothing. Translation happens on your phone; nothing is uploaded, sold or shared." />
+    <link rel="icon" href="icons/icon-192.png" />
+    <style>
+      :root {
+        --accent: #0d7a5f;
+        --bg: #f6f7f8;
+        --surface: #ffffff;
+        --text: #14181c;
+        --text-soft: #5b6670;
+        --border: #dde2e6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --accent: #3ecfa4;
+          --bg: #0b0f14;
+          --surface: #141a21;
+          --text: #e8edf2;
+          --text-soft: #9aa7b3;
+          --border: #2a343e;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 0 0 4rem;
+      }
+      header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 2rem 1.25rem 1.5rem;
+      }
+      header .brand { display: flex; align-items: center; gap: 0.75rem; max-width: 640px; margin: 0 auto; }
+      header img { width: 40px; height: 40px; border-radius: 9px; }
+      h1 { font-size: 1.4rem; margin: 0; }
+      .updated { color: var(--text-soft); font-size: 0.9rem; margin: 0.35rem 0 0; }
+      main { max-width: 640px; margin: 0 auto; padding: 1.75rem 1.25rem 0; }
+      h2 { font-size: 1.05rem; margin: 2rem 0 0.5rem; }
+      p { margin: 0.5rem 0; }
+      ul { margin: 0.5rem 0; padding-left: 1.3rem; }
+      li { margin: 0.35rem 0; }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin: 0.75rem 0 1.25rem;
+      }
+      .card p:first-child { margin-top: 0; }
+      .card p:last-child { margin-bottom: 0; }
+      a { color: var(--accent); }
+      .headline {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--accent);
+      }
+      footer {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 1.5rem 1.25rem 0;
+        color: var(--text-soft);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img src="icons/icon-192.png" alt="" width="40" height="40" />
+        <div>
+          <h1>Privacy Policy</h1>
+          <p class="updated">Travel Translator · Last updated 5 September 2026</p>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <p class="headline">The short version: this app collects nothing.</p>
+        <p>
+          There is no account, no sign-up, no server run by us, and no analytics or
+          advertising software in the app. Everything below explains exactly why that is
+          true, so you can check it rather than take our word for it.
+        </p>
+      </div>
+
+      <h2>Translation</h2>
+      <p>
+        By default, translation happens entirely on your phone using Google's ML Kit
+        on-device models, after you download the language packs once over Wi-Fi. That text
+        never leaves your device.
+      </p>
+      <p>
+        Settings has an optional switch, <em>"Use the internet when it is available."</em>
+        When you turn this on, the text you type or speak is sent to
+        <a href="https://mymemory.translated.net" target="_blank" rel="noopener">MyMemory</a>,
+        a third-party translation service, to get a translation back — no name, account,
+        or device identifier is sent with it, only the text itself. This switch is off by
+        default on Android (which has a full on-device engine) and on by default in the
+        browser preview (which has no on-device engine to fall back to). The app always
+        labels each result with where it came from — your phone, the internet, or the
+        built-in phrasebook — so you always know which just happened.
+      </p>
+
+      <h2>Microphone</h2>
+      <p>
+        If you use voice input, audio is processed by your phone's own speech-recognition
+        service (or, on Android, Google's on-device recogniser) to turn it into text. The
+        app itself does not record, store, or transmit audio anywhere. The microphone
+        permission is optional — the app is fully usable by typing if you decline it or if
+        your phone has no microphone.
+      </p>
+
+      <h2>Internet permission</h2>
+      <p>The app requests internet access for exactly two things:</p>
+      <ul>
+        <li>downloading the offline language packs (a one-time, ~30&nbsp;MB-per-language download), and</li>
+        <li>the optional online-translation switch described above, only while it is turned on.</li>
+      </ul>
+      <p>Once the language packs are downloaded, the app can be used indefinitely with no connection at all.</p>
+
+      <h2>The message log</h2>
+      <p>
+        Every translation you make is saved in a log stored only on your own phone, so you
+        can search or export it later as a CSV file. It is never uploaded anywhere. You can
+        delete the entire log at any time from Settings → Privacy → Delete every message.
+      </p>
+
+      <h2>What we don't do</h2>
+      <ul>
+        <li>No analytics or usage tracking of any kind.</li>
+        <li>No advertising, and no advertising SDKs.</li>
+        <li>No crash-reporting service.</li>
+        <li>No accounts, no passwords, nothing to reset.</li>
+        <li>We never sell or share your data, because we never receive it in the first place.</li>
+      </ul>
+
+      <h2>Children</h2>
+      <p>
+        This app is not directed at children and does not knowingly collect information
+        from anyone, regardless of age — there is nothing for it to collect.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If this policy ever changes, the update will be posted on this same page with a new
+        "Last updated" date above.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about this policy or the app can be sent to
+        <a href="mailto:amaleonbg@gmail.com">amaleonbg@gmail.com</a>.
+      </p>
+    </main>
+
+    <footer>
+      <p>Travel Translator — English · Български · Português · Español</p>
+    </footer>
+  </body>
+</html>

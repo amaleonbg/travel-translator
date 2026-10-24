@@ -94,7 +94,7 @@ Then in `android/app/build.gradle`, confirm:
 android {
     compileSdk 36
     defaultConfig {
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
@@ -106,8 +106,9 @@ android {
 **31 August 2026**. Since that date has now passed, submitting anything lower will be
 rejected.
 
-`minSdk 23` (Android 6) covers effectively every phone still in use while satisfying ML
-Kit.
+`minSdk 24` (Android 7) is what the generated project actually uses (see
+`android/variables.gradle`) — it covers effectively every phone still in use while
+satisfying ML Kit's floor.
 
 ---
 
@@ -130,6 +131,31 @@ that is the test that matters, and it is the whole promise of the product.
 ---
 
 ## Part 5 — Sign the app
+
+**This part is already done for this project** — the keystore exists, `build.gradle` reads
+it, ProGuard/R8 shrinking is on for the release build type, and a GitHub Actions workflow
+(`.github/workflows/android-release.yml`) builds a signed `.aab` (Android App Bundle) on
+demand. What's left is entirely non-code:
+
+1. Open `keys/travel-translator-release.jks.b64.txt` in the project folder and copy its
+   one line.
+2. On GitHub: **repo → Settings → Secrets and variables → Actions → New repository
+   secret**, four times:
+   - `ANDROID_KEYSTORE_BASE64` — the line you just copied
+   - `ANDROID_KEYSTORE_PASSWORD` — from `android/keystore.properties`
+   - `ANDROID_KEY_ALIAS` — `travel-translator`
+   - `ANDROID_KEY_PASSWORD` — same value as `ANDROID_KEYSTORE_PASSWORD`
+3. **Actions tab → Build signed Android release (AAB) → Run workflow.** The finished run's
+   Artifacts section has `travel-translator-signed-N.aab` — that is the file you upload to
+   Play Console.
+4. **Back up `keys/travel-translator-release.jks` somewhere that is not this laptop** — a
+   password manager's file storage, an encrypted USB drive, cloud storage. This is the one
+   file in this whole project that cannot be regenerated. Losing it means losing the
+   ability to ever update this app listing again.
+
+The rest of this section is the manual Android Studio alternative, kept for reference —
+useful if you ever need a *different* keystore, or want to sign a build without pushing to
+GitHub first.
 
 Google Play will not accept an unsigned app, and **if you lose this key you cannot ever
 update the app again** — you would have to publish a new listing and lose your reviews and

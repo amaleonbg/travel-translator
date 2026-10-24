@@ -1,3 +1,16 @@
+// Release signing. keystore.properties is gitignored and holds the real
+// values; it exists on a machine that has run the keystore-generation step
+// (see docs/ANDROID-BUILD.md) and is written by CI from GitHub secrets just
+// before a release build. When it is absent — a fresh clone, or a plain
+// debug build — the release build type below simply comes out unsigned
+// rather than failing, so `./gradlew assembleDebug` and everyday development
+// are unaffected.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 apply plugin: 'com.android.application'
 
 android {
@@ -16,10 +29,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Unsigned when no keystore.properties is present (see the note
+            // above); Play will refuse an unsigned bundle, so this only
+            // matters for local experimentation, never for what gets shipped.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : null
+            // Shrinks and obfuscates the release build. This is the config
+            // Play expects; the debug build type (used for every day-to-day
+            // install and the CI smoke build) is untouched, so this cannot
+            // slow down or break normal development.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

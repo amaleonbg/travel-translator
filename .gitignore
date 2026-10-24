@@ -50,6 +50,10 @@ Thumbs.db
 # planning document is not something to put on the open internet by accident.
 # Delete this line if you would rather it were tracked.
 Mobile Translator App Development.docx
+Mobile Translator App Development-Travel Translator-4L-Claude.docx
+
+# Screenshots and text Claude produced while working on the app. Working material, not app source.
+Claude outputs/
 
 # Staging area for files waiting to be removed. Nothing here belongs in history.
 _to_delete/
@@ -74,3 +78,8 @@ _to_delete/
 # Local overrides
 .env
 .env.local
+
+# Whole folder holding the release keystore, its plaintext password file and
+# its base64 export (used only to paste into a GitHub secret). Belt and
+# braces alongside the *.jks / keystore.properties rules above.
+/keys/

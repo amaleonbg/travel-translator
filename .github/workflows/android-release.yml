@@ -1,0 +1,142 @@
+# Build a SIGNED release .aab (Android App Bundle) — the file Google Play
+# actually accepts for a new listing or an update. android.yml (the other
+# workflow) builds an unsigned debug .apk for everyday testing; this one is
+# the store-ready artifact, and it only runs when you ask it to.
+#
+# Requires four repository secrets (Settings → Secrets and variables →
+# Actions → New repository secret), created once:
+#
+#   ANDROID_KEYSTORE_BASE64    the .jks file, base64-encoded (see below)
+#   ANDROID_KEYSTORE_PASSWORD  the keystore password
+#   ANDROID_KEY_ALIAS          travel-translator
+#   ANDROID_KEY_PASSWORD       the key password (same as the keystore password
+#                              here, since the local keystore.properties uses
+#                              one password for both)
+#
+# To get the base64 value: open keys/travel-translator-release.jks.b64.txt
+# in the project folder and copy its single line — it was generated
+# alongside the keystore for exactly this. That file, and the keystore
+# itself, are gitignored and never leave your machine on their own.
+#
+# Without those four secrets this workflow still runs but produces an
+# UNSIGNED bundle (see the "Check signing secrets" step) so a misconfigured
+# run fails fast with a clear message instead of a confusing Gradle error.
+
+name: Build signed Android release (AAB)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build release bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bundle the web code and copy it into the Android project
+        run: npm run cap:sync
+
+      - name: Run the checks
+        run: npm run verify
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0 platform-tools"
+
+      - name: Check signing secrets are present
+        id: signing
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "have_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_secrets=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret set — building an UNSIGNED bundle. Google Play will reject this. See the comment at the top of this workflow file for how to add the four required secrets."
+          fi
+
+      - name: Decode the keystore and write keystore.properties
+        if: steps.signing.outputs.have_secrets == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/keystore.properties
+
+      - name: Build the release bundle
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Remove the decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks" android/keystore.properties
+
+      - name: Name the file with the run number
+        id: name
+        run: |
+          SUFFIX="unsigned"
+          if [ "${{ steps.signing.outputs.have_secrets }}" = "true" ]; then SUFFIX="signed"; fi
+          echo "aab=travel-translator-${SUFFIX}-${{ github.run_number }}.aab" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/bundle/release/app-release.aab \
+             "travel-translator-${SUFFIX}-${{ github.run_number }}.aab"
+
+      - name: Upload the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.aab }}
+          path: ${{ steps.name.outputs.aab }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          SIZE=$(du -h "${{ steps.name.outputs.aab }}" | cut -f1)
+          SHA256=$(sha256sum "${{ steps.name.outputs.aab }}" | cut -d' ' -f1)
+          {
+            echo "### Android release build ${{ github.run_number }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`${{ steps.name.outputs.aab }}\` |"
+            echo "| Signed | ${{ steps.signing.outputs.have_secrets }} |"
+            echo "| Size | $SIZE |"
+            echo "| SHA-256 | \`$SHA256\` |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo ""
+            echo "This is the .aab file to upload to Google Play Console — not the debug .apk from the other workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
